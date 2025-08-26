@@ -17,5 +17,17 @@
 *.tmproj
 .vscode/
 
+# Age keys
+key.txt
+*.age
+
+# SOPS backup files
+*.bak
+*.backup
+
+# Helm generated files
+charts/
+*.tgz
+
 # Secrets (plaintext only)
 values-secrets.yaml

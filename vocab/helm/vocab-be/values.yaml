@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: default
+  repository: ngocxxu/vocab-be
   pullPolicy: Always
   tag: "latest"
 
@@ -14,18 +14,35 @@ secrets:
   enabled: false
   database:
     url: ""
-    username: ""
-    password: ""
+  api:
+    prefix: ""
+    port: ""
+    corsOrigins: ""
+  swagger:
+    enable: ""
   jwt:
     secret: ""
-    refreshSecret: ""
-  api:
+    issuer: ""
+  health:
+    token: ""
+  passengers:
+    allowed: ""
+  supabase:
+    url: ""
     key: ""
   redis:
-    password: ""
+    url: ""
+    port: ""
+    switch: ""
   email:
-    smtpPassword: ""
-    apiKey: ""
+    user: ""
+    password: ""
+  frontend:
+    url: ""
+  fcm:
+    projectId: ""
+    privateKey: ""
+    clientEmail: ""
   external: {}
 
 serviceAccount:
