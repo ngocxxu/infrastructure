@@ -1,13 +1,32 @@
 replicaCount: 1
 
 image:
-  repository: ngocxxu/vocab-be
+  repository: default
   pullPolicy: Always
   tag: "latest"
 
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
+
+# Secrets configuration
+secrets:
+  enabled: false
+  database:
+    url: ""
+    username: ""
+    password: ""
+  jwt:
+    secret: ""
+    refreshSecret: ""
+  api:
+    key: ""
+  redis:
+    password: ""
+  email:
+    smtpPassword: ""
+    apiKey: ""
+  external: {}
 
 serviceAccount:
   create: false

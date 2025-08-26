@@ -14,8 +14,6 @@ values-prod.yaml
 values-staging.yaml
 values-dev.yaml
 **/values-*.yaml
-secrets.yaml
-**/secrets*.yaml
 
 # Terraform
 *.tfstate
@@ -117,8 +115,3 @@ alertmanager/config/
 # CI/CD
 .github/workflows/secrets/
 .gitlab-ci-local/
-
-# Secrets (plaintext only)  
-secrets.yaml
-secrets-*.yaml
-**/secrets.yaml
