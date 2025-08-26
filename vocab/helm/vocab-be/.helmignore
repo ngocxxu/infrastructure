@@ -16,3 +16,8 @@
 .idea/
 *.tmproj
 .vscode/
+
+# Secrets (plaintext only)
+secrets.yaml
+secrets-*.yaml
+**/secrets.yaml

@@ -1,0 +1,124 @@
+# Helm
+*.tgz
+charts/*/charts/
+charts/*/requirements.lock
+charts/*/Chart.lock
+
+# Helm dependencies
+**/charts/*.tgz
+**/requirements.lock
+**/Chart.lock
+
+# Helm values files with secrets
+values-prod.yaml
+values-staging.yaml
+values-dev.yaml
+**/values-*.yaml
+secrets.yaml
+**/secrets*.yaml
+
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfplan
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate.d/
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
+kube-config
+.kube/
+
+# Environment files
+.env
+.env.*
+*.env
+.envrc
+
+# Secrets and credentials
+secrets/
+credentials/
+certs/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.truststore
+
+# Cloud provider configs
+.aws/
+.gcp/
+.azure/
+gcloud/
+aws-credentials
+azure-credentials
+
+# Ansible
+*.retry
+.vault_pass
+vault_password_file
+
+# IDE and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+log/
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+*.tmp
+*.temp
+
+# Backup files
+*.bak
+*.backup
+backup/
+backups/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ArgoCD
+argocd-*
+argo-*
+
+# Monitoring configs with sensitive data
+prometheus/config/
+grafana/provisioning/datasources/
+alertmanager/config/
+
+# CI/CD
+.github/workflows/secrets/
+.gitlab-ci-local/
+
+# Secrets (plaintext only)  
+secrets.yaml
+secrets-*.yaml
+**/secrets.yaml
