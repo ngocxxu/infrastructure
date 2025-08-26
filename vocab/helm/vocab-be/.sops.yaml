@@ -1,7 +1,3 @@
 creation_rules:
-  # Match any secrets file in vocab-be folder  
-  - path_regex: vocab-be/.*secrets.*\.yaml$
+  - path_regex: .*secrets.*\.yaml$
     age: age1mqgke2gy4uq36ytxmh7320h6v3q44kczunha4nssp69j20a7ey6qhx24xq
-  # # Match any secrets file in vocab-fe folder  
-  # - path_regex: vocab-fe/.*secrets.*\.yaml$
-  #   age: age1mqgke2gy4uq36ytxmh7320h6v3q44kczunha4nssp69j20a7ey6qhx24xq
