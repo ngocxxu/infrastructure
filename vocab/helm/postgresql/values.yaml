@@ -1,0 +1,29 @@
+global:
+  postgresql:
+    auth:
+      postgresPassword: ""
+      username: ""
+      password: ""
+      database: ""
+
+primary:
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: "local-path"
+
+  # resources:
+  #   limits:
+  #     memory: 512Mi
+  #     cpu: 500m
+  #   requests:
+  #     memory: 256Mi
+  #     cpu: 250m
+
+  podSecurityContext:
+    fsGroup: 1001
+
+  containerSecurityContext:
+    runAsUser: 1001
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
