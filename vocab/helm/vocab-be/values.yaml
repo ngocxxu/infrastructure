@@ -63,15 +63,18 @@ service:
   port: 3000
 
 ingress:
-  enabled: false
-  className: ""
-  annotations: {}
+  enabled: true
+  className: "traefik"
+  annotations:
+    traefik.ingress.kubernetes.io/router.tls.certresolver: le
   hosts:
-    - host: chart-example.local
+    - host: vocab-be.mooo.com
       paths:
         - path: /
           pathType: ImplementationSpecific
-  tls: []
+  tls:
+    - hosts:
+        - vocab-be.mooo.com
 
 resources: {}
 
