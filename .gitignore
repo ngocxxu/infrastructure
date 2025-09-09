@@ -125,5 +125,4 @@ key.txt
 *.backup
 
 # Helm generated files
-charts/
 *.tgz
