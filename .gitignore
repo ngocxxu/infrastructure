@@ -10,10 +10,7 @@ charts/*/Chart.lock
 **/Chart.lock
 
 # Helm values files with secrets
-values-prod.yaml
-values-staging.yaml
-values-dev.yaml
-**/values-*.yaml
+**/*.secrets.yaml
 
 # Terraform
 *.tfstate
