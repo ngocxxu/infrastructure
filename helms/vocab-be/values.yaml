@@ -43,7 +43,6 @@ secrets:
     projectId: ""
     privateKey: ""
     clientEmail: ""
-  external: {}
 
 serviceAccount:
   create: false
@@ -76,7 +75,13 @@ ingress:
     - hosts:
         - vocab-be.mooo.com
 
-resources: {}
+# resources: 
+#   limits:
+#     memory: 250Mi
+#     cpu: 75m
+#   requests:
+#     memory: 100Mi
+#     cpu: 25m
 
 livenessProbe:
   httpGet:

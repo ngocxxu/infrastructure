@@ -12,13 +12,13 @@ primary:
     size: 1Gi
     storageClass: "local-path"
 
-  # resources:
-  #   limits:
-  #     memory: 512Mi
-  #     cpu: 500m
-  #   requests:
-  #     memory: 256Mi
-  #     cpu: 250m
+  resources:
+    limits:
+      memory: 100Mi
+      cpu: 50m
+    requests:
+      memory: 50Mi
+      cpu: 25m
 
   podSecurityContext:
     fsGroup: 1001
