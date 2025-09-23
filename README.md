@@ -1,7 +1,9 @@
 # Deployment
 
 ## Install
+
 ### Postgresql
+
 ```bash
 SOPS_AGE_KEY_FILE=/Users/macos/STENGG-2/age-keygen/my-infra.txt \
 helm secrets upgrade --install postgresql bitnami/postgresql \
@@ -12,12 +14,24 @@ helm secrets upgrade --install postgresql bitnami/postgresql \
 ```
 
 ### Vocab-BE
+
 ```bash
 SOPS_AGE_KEY_FILE=/Users/macos/STENGG-2/age-keygen/my-infra.txt \
 helm secrets upgrade --install vocab-be helms/vocab-be \
   -f helms/vocab-be/values.yaml \
   -f helms/vocab-be/values.secrets.yaml \
   -n vocab-be \
+  --create-namespace
+```
+
+### Vocab-FE
+
+```bash
+SOPS_AGE_KEY_FILE=/Users/macos/STENGG-2/age-keygen/my-infra.txt \
+helm secrets upgrade --install vocab-fe helms/vocab-fe \
+  -f helms/vocab-fe/values.yaml \
+  -f helms/vocab-fe/values.secrets.yaml \
+  -n vocab-fe \
   --create-namespace
 ```
 

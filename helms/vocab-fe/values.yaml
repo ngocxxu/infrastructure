@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: ngocxxu/vocab-be
+  repository: ngocxxu/vocab-fe
   pullPolicy: Always
   tag: "latest"
 
@@ -9,40 +9,28 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-# Secrets configuration
 secrets:
   enabled: false
-  database:
-    url: ""
-  api:
-    prefix: ""
-    port: ""
-    corsOrigins: ""
-  swagger:
-    enable: ""
-  jwt:
-    secret: ""
-    issuer: ""
-  health:
-    token: ""
-  passengers:
-    allowed: ""
-  supabase:
-    url: ""
-    key: ""
-  redis:
-    url: ""
-    port: ""
-    switch: ""
-  email:
-    user: ""
-    password: ""
-  frontend:
-    url: ""
-  fcm:
-    projectId: ""
-    privateKey: ""
-    clientEmail: ""
+  # Backend API configuration
+  nestjs:
+    apiUrl: ""
+  # Frontend API configuration
+  nextjs:
+    publicApiUrl: ""
+    telemetryDisabled: ""
+  # Clerk authentication
+  clerk:
+    secretKey: ""
+    publishableKey: ""
+  # PostHog analytics
+  posthog:
+    host: ""
+  # Sentry error tracking
+  sentry:
+    dsn: ""
+    authToken: ""
+    organization: ""
+    project: ""
 
 serviceAccount:
   create: false
@@ -67,30 +55,30 @@ ingress:
   annotations:
     traefik.ingress.kubernetes.io/router.tls.certresolver: le
   hosts:
-    - host: vocab-be.mooo.com
+    - host: vocab-management.mooo.com
       paths:
         - path: /
           pathType: ImplementationSpecific
   tls:
     - hosts:
-        - vocab-be.mooo.com
+        - vocab-management.mooo.com
 
-resources: 
-  limits:
-    memory: 250Mi
-    cpu: 25m
-  requests:
-    memory: 100Mi
-    cpu: 10m
+# resources:
+#   limits:
+#     memory: 250Mi
+#     cpu: 75m
+#   requests:
+#     memory: 100Mi
+#     cpu: 25m
 
-livenessProbe:
-  httpGet:
-    path: /api/v1/health
-    port: http
-readinessProbe:
-  httpGet:
-    path: /api/v1/health
-    port: http
+# livenessProbe:
+#   httpGet:
+#     path: /api/v1/health
+#     port: http
+# readinessProbe:
+#   httpGet:
+#     path: /api/v1/health
+#     port: http
 
 autoscaling:
   enabled: false

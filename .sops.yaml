@@ -1,0 +1,7 @@
+creation_rules:
+  - path_regex: helms/.*/values\.secrets\.yaml$
+    age: age1mqgke2gy4uq36ytxmh7320h6v3q44kczunha4nssp69j20a7ey6qhx24xq
+    unencrypted_suffix: _unencrypted
+  - path_regex: .*secrets\.yaml$
+    age: age1mqgke2gy4uq36ytxmh7320h6v3q44kczunha4nssp69j20a7ey6qhx24xq
+    unencrypted_suffix: _unencrypted
