@@ -10,7 +10,7 @@ nameOverride: ""
 fullnameOverride: ""
 
 secrets:
-  enabled: false
+  enabled: true
   # Backend API configuration
   nestjs:
     apiUrl: ""
@@ -63,7 +63,7 @@ ingress:
     - hosts:
         - vocab-management.mooo.com
 
-resources: 
+resources:
   limits:
     memory: 120Mi
     # cpu: 40m
