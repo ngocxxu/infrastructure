@@ -32,8 +32,6 @@ secrets:
     key: ""
   redis:
     url: ""
-    port: ""
-    switch: ""
   email:
     user: ""
     password: ""
