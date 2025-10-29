@@ -18,6 +18,7 @@ secrets:
   nextjs:
     publicApiUrl: ""
     telemetryDisabled: ""
+    publicSocketUrl: ""
   # Clerk authentication
   clerk:
     secretKey: ""
