@@ -26,11 +26,10 @@ master:
   
   readinessProbe:
     exec:
-      command: ["redis-cli", "ping"]    
-
+      command: ["bash", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG"]
   livenessProbe:
     exec:
-      command: ["redis-cli", "ping"]
+      command: ["bash", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG"]
 
   podSecurityContext:
     fsGroup: 1001
@@ -56,12 +55,9 @@ replica:
       cpu: 40m
   
   readinessProbe:
-    exec:
-      command: ["redis-cli", "ping"]    
-
+    enabled: false
   livenessProbe:
-    exec:
-      command: ["redis-cli", "ping"]  
+    enabled: false
 
   podSecurityContext:
     fsGroup: 1001
