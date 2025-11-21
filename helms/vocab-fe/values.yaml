@@ -53,16 +53,12 @@ service:
 ingress:
   enabled: true
   className: "traefik"
-  annotations:
-    traefik.ingress.kubernetes.io/router.tls.certresolver: le
+  annotations: {}
   hosts:
-    - host: vocab-management.mooo.com
+    - host: vocab.ngocquach.top
       paths:
         - path: /
-          pathType: ImplementationSpecific
-  tls:
-    - hosts:
-        - vocab-management.mooo.com
+          pathType: Prefix
 
 resources:
   limits:
