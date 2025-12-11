@@ -32,6 +32,8 @@ secrets:
     authToken: ""
     organization: ""
     project: ""
+  cloudinary:
+    url: ""
 
 serviceAccount:
   create: false

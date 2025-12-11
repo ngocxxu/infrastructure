@@ -43,6 +43,9 @@ secrets:
     clientEmail: ""
   gemini:
     apiKey: ""
+  cloudinary:
+    url: ""
+
 
 serviceAccount:
   create: false
