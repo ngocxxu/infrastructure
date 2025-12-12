@@ -1,0 +1,53 @@
+---
+- name: Set Timezone to {{ system_timezone }}
+  timezone:
+    name: "{{ system_timezone }}"
+
+- name: Update Apt Cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600 # Only update if it's been more than 1 hour since the last update
+
+- name: Install Basic Packages
+  apt:
+    name:
+      - curl
+      - git
+      - htop
+      - vim
+    state: present
+
+# --- CONFIGURE SWAP (VIRTUAL MEMORY) ---
+# K3s is very easy to crash if it runs out of RAM, Swap is required for VPS < 8GB RAM
+- name: Check if swap file exists
+  stat:
+    path: /swapfile
+  register: swap_check
+
+- name: Create Swap file ({{ swap_size }})
+  command: fallocate -l {{ swap_size }} /swapfile
+  when: not swap_check.stat.exists
+
+- name: Set Swap permissions
+  file:
+    path: /swapfile
+    owner: root
+    group: root
+    mode: '0600'
+  when: not swap_check.stat.exists
+
+- name: Format Swap
+  command: mkswap /swapfile
+  when: not swap_check.stat.exists
+
+- name: Enable Swap
+  command: swapon /swapfile
+  when: not swap_check.stat.exists
+
+- name: Persist Swap in fstab
+  mount:
+    name: none
+    src: /swapfile
+    fstype: swap
+    opts: sw
+    state: present

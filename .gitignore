@@ -123,3 +123,5 @@ key.txt
 
 # Helm generated files
 *.tgz
+
+.vault_pass

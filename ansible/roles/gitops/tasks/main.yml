@@ -1,0 +1,34 @@
+---
+- name: Check if Flux is already installed
+  stat:
+    path: /usr/local/bin/flux
+  register: flux_binary
+
+# 1. Download FluxCD binary to VPS
+- name: Install Flux CLI
+  shell: |
+    curl -s https://fluxcd.io/install.sh | sudo bash
+  when: not flux_binary.stat.exists
+
+# 2. Check if Flux is bootstrapped
+- name: Check if Flux is bootstrapped
+  shell: flux check
+  register: flux_check
+  ignore_errors: true
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+# 3. Run bootstrap command (Only run once)
+# This command will connect to Github, create repo 'my-k3s-fleet' and install Flux into K3s
+- name: Bootstrap FluxCD into EXISTING Repo
+  shell: |
+    flux bootstrap github \
+      --owner={{ github_user }} \
+      --repository={{ github_repo }} \
+      --branch=main \
+      --path=./clusters/mmo-vps \
+      --personal
+  environment:
+    GITHUB_TOKEN: "{{ github_token }}"
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  when: flux_check.failed == true

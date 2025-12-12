@@ -1,0 +1,31 @@
+---
+# 1. Install Fail2Ban
+- name: Install Fail2Ban
+  apt:
+    name: fail2ban
+    state: present
+
+# 2. Create ban rules (Override default configuration file)
+- name: Configure Fail2Ban Rule
+  copy:
+    dest: /etc/fail2ban/jail.local
+    content: |
+      [DEFAULT]
+      # Ban time: 3600 seconds (1 hour)
+      bantime = 3600
+      
+      # Tracking time: 600 seconds (10 minutes)
+      findtime = 600
+      
+      # Allowed wrong attempts: 5 times
+      maxretry = 5
+
+      [sshd]
+      enabled = true
+
+# 3. Start and enable Fail2Ban service
+- name: Start and Enable Fail2Ban
+  service:
+    name: fail2ban
+    state: restarted
+    enabled: yes

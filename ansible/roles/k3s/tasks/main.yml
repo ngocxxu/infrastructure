@@ -1,0 +1,39 @@
+---
+- name: Check if K3s is already installed
+  stat:
+    path: /usr/local/bin/k3s
+  register: k3s_binary
+
+# 1. Install K3s by main script
+- name: Install K3s Server
+  shell: |
+    curl -sfL https://get.k3s.io | sh -
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    K3S_TOKEN: "{{ k3s_token }}"
+    # Disable Traefik by default (if you want to install Nginx Ingress later)
+    # INSTALL_K3S_EXEC: "--disable=traefik" 
+  when: not k3s_binary.stat.exists
+
+# 2. Wait for K3s to be ready
+- name: Wait for K3s API to be ready
+  wait_for:
+    port: 6443
+    delay: 10
+    timeout: 300
+
+# 3. Get kubeconfig from VPS
+- name: Read remote kubeconfig
+  slurp:
+    src: /etc/rancher/k3s/k3s.yaml
+  register: remote_kubeconfig
+  become: true
+
+# 4. Fix IP and save to local machine
+- name: Save kubeconfig to local machine
+  local_action: 
+    module: copy
+    # K3s default returns IP 127.0.0.1, we have to replace it with VPS IP (inventory_hostname)
+    content: "{{ remote_kubeconfig['content'] | b64decode | regex_replace('127.0.0.1', ansible_host) }}"
+    dest: "{{ local_kubeconfig_path }}"
+    mode: '0600'
