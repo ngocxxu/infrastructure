@@ -37,10 +37,12 @@ spec:
           cpu: 40m
       readinessProbe:
         exec:
-          command: ["bash", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG"]
+          command:
+            ["bash", "-c", 'redis-cli -a "$REDIS_PASSWORD" ping | grep PONG']
       livenessProbe:
         exec:
-          command: ["bash", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG"]
+          command:
+            ["bash", "-c", 'redis-cli -a "$REDIS_PASSWORD" ping | grep PONG']
       podSecurityContext:
         fsGroup: 1001
       containerSecurityContext:
@@ -70,4 +72,3 @@ spec:
         runAsUser: 1001
         runAsNonRoot: true
         allowPrivilegeEscalation: false
-
