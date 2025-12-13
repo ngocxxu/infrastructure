@@ -31,9 +31,9 @@
 
 # 4. Fix IP and save to local machine
 - name: Save kubeconfig to local machine
-  local_action: 
-    module: copy
-    # K3s default returns IP 127.0.0.1, we have to replace it with VPS IP (inventory_hostname)
+  copy:
     content: "{{ remote_kubeconfig['content'] | b64decode | regex_replace('127.0.0.1', ansible_host) }}"
     dest: "{{ local_kubeconfig_path }}"
     mode: '0600'
+  delegate_to: localhost
+  become: false
