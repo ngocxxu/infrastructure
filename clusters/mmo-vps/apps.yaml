@@ -1,0 +1,32 @@
+---
+# Part 1: Declare Source (SOURCE)
+# Define the repository where the code is located
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: infra-repo # Name of the source
+  namespace: flux-system # Must be in this namespace
+spec:
+  interval: 1m # Check Git every 1 minute
+  url: https://github.com/ngocxxu/infrastructure
+  ref:
+    branch: main # Branch to follow (usually main or master)
+
+---
+# Part 2: Declare Installation (KUSTOMIZATION)
+# Define the synchronization from the source to K3s
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: install-apps # Name of the installation task
+  namespace: flux-system
+spec:
+  interval: 1m
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: infra-repo # Must be the same as Part 1 above
+  path: ./clusters/mmo-vps/helm-releases # <--- Path to the folder containing Helm releases
+  prune: true # Important: If you delete the file on Git, it will delete the app in K3s
+  wait: true # Wait for the app to run stable before reporting success

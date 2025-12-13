@@ -1,0 +1,46 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: postgresql
+  namespace: default
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: postgresql
+      sourceRef:
+        kind: HelmRepository
+        name: bitnami
+        namespace: flux-system
+      version: "17.x"
+  values:
+    global:
+      postgresql:
+        auth:
+          postgresPassword: ""
+          username: ""
+          password: ""
+          database: ""
+    primary:
+      persistence:
+        enabled: true
+        size: 1Gi
+        storageClass: "local-path"
+      resources:
+        limits:
+          memory: 100Mi
+          cpu: 50m
+        requests:
+          memory: 50Mi
+          cpu: 25m
+      podSecurityContext:
+        fsGroup: 1001
+      containerSecurityContext:
+        runAsUser: 1001
+        runAsNonRoot: true
+        allowPrivilegeEscalation: false
+    image:
+      registry: docker.io
+      repository: bitnamilegacy/postgresql
+      tag: 17.6.0-debian-12-r4
+

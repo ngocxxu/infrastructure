@@ -1,0 +1,95 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: vocab-be
+  namespace: default
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./helms/vocab-be
+      sourceRef:
+        kind: GitRepository
+        name: infra-repo
+        namespace: flux-system
+  values:
+    replicaCount: 1
+    image:
+      repository: ngocxxu/vocab-be
+      pullPolicy: Always
+      tag: "latest"
+    imagePullSecrets: []
+    nameOverride: ""
+    fullnameOverride: ""
+    secrets:
+      enabled: false
+      database:
+        url: ""
+      api:
+        prefix: ""
+        port: ""
+        corsOrigins: ""
+      swagger:
+        enable: ""
+      jwt:
+        secret: ""
+        issuer: ""
+      health:
+        token: ""
+      passengers:
+        allowed: ""
+      supabase:
+        url: ""
+        key: ""
+      redis:
+        url: ""
+      email:
+        user: ""
+        password: ""
+      frontend:
+        url: ""
+      fcm:
+        projectId: ""
+        privateKey: ""
+        clientEmail: ""
+      gemini:
+        apiKey: ""
+      cloudinary:
+        url: ""
+    serviceAccount:
+      create: false
+      automount: true
+      annotations: {}
+      name: ""
+    podAnnotations: {}
+    podLabels: {}
+    podSecurityContext: {}
+    securityContext: {}
+    service:
+      type: ClusterIP
+      port: 3000
+    ingress:
+      enabled: true
+      className: "traefik"
+      annotations: {}
+      hosts:
+        - host: vocab-be.ngocquach.top
+          paths:
+            - path: /
+              pathType: Prefix
+    resources:
+      limits:
+        memory: 120Mi
+      requests:
+        memory: 60Mi
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 100
+      targetCPUUtilizationPercentage: 80
+    volumes: []
+    volumeMounts: []
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+

@@ -1,0 +1,73 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: redis
+  namespace: default
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: redis
+      sourceRef:
+        kind: HelmRepository
+        name: bitnami
+        namespace: flux-system
+      version: "20.x"
+  values:
+    global:
+      redis:
+        password: ""
+    image:
+      repository: bitnamilegacy/redis
+      tag: 8.2.1-debian-12-r0
+    auth:
+      enabled: true
+      password: ""
+    master:
+      persistence:
+        enabled: true
+        size: 1Gi
+        storageClass: "local-path"
+      resources:
+        limits:
+          memory: 30Mi
+          cpu: 80m
+        requests:
+          memory: 10Mi
+          cpu: 40m
+      readinessProbe:
+        exec:
+          command: ["bash", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG"]
+      livenessProbe:
+        exec:
+          command: ["bash", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG"]
+      podSecurityContext:
+        fsGroup: 1001
+      containerSecurityContext:
+        runAsUser: 1001
+        runAsNonRoot: true
+        allowPrivilegeEscalation: false
+    replica:
+      replicaCount: 1
+      persistence:
+        enabled: true
+        size: 0.5Gi
+        storageClass: "local-path"
+      resources:
+        limits:
+          memory: 30Mi
+          cpu: 80m
+        requests:
+          memory: 10Mi
+          cpu: 40m
+      readinessProbe:
+        enabled: false
+      livenessProbe:
+        enabled: false
+      podSecurityContext:
+        fsGroup: 1001
+      containerSecurityContext:
+        runAsUser: 1001
+        runAsNonRoot: true
+        allowPrivilegeEscalation: false
+
