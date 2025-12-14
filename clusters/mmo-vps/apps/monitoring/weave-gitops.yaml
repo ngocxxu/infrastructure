@@ -14,7 +14,7 @@ spec:
         kind: HelmRepository
         name: weave-gitops
         namespace: flux-system
-      version: "0.x"
+      version: "4.0.x"
   targetNamespace: flux-system
   install:
     createNamespace: false
