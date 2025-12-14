@@ -22,9 +22,10 @@ spec:
       tag: 8.2.1-debian-12-r0
     auth:
       enabled: true
-      # Use existing secret with mapped password key from DopplerSecret
+      # Use existing secret from DopplerSecret
+      # Password is available as REDIS_PASSWORD (UPPERCASE) in the secret
       existingSecret: redis-env
-      existingSecretPasswordKey: redis-password
+      existingSecretPasswordKey: REDIS_PASSWORD
     master:
       # Load all other environment variables from Doppler secret
       # All variables with UPPERCASE names from Doppler will be available

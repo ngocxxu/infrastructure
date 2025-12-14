@@ -20,11 +20,12 @@ spec:
     global:
       postgresql:
         auth:
-          # Use existing secret with mapped password key from DopplerSecret
+          # Use existing secret from DopplerSecret
+          # Password is available as POSTGRES_PASSWORD (UPPERCASE) in the secret
           existingSecret: postgresql-env
           secretKeys:
-            adminPasswordKey: postgres-password
-            userPasswordKey: postgres-password
+            adminPasswordKey: POSTGRES_PASSWORD
+            userPasswordKey: POSTGRES_PASSWORD
     primary:
       # Load all other environment variables from Doppler secret
       # All variables with UPPERCASE names from Doppler will be available
