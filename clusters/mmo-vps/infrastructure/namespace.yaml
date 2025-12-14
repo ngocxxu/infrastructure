@@ -1,0 +1,32 @@
+# Namespace for shared databases
+# Contains databases that can be used by multiple projects: PostgreSQL, Redis
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: shared
+  labels:
+    name: shared
+    purpose: shared-databases
+
+---
+# Namespace for Vocab project
+# Contains all Vocab application resources: Frontend, Backend
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: project-vocab
+  labels:
+    name: project-vocab
+    purpose: project-isolation
+    project: vocab
+
+---
+# Namespace for monitoring tools
+# Reserved for future monitoring stack (Prometheus, Grafana, etc.)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    name: monitoring
+    purpose: monitoring

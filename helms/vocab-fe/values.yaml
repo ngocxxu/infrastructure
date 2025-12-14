@@ -9,31 +9,12 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+# Secrets configuration
+# Secret name from DopplerSecret managedSecret.name
+# This secret is automatically created by Doppler Operator
 secrets:
   enabled: true
-  # Backend API configuration
-  nestjs:
-    apiUrl: ""
-  # Frontend API configuration
-  nextjs:
-    publicApiUrl: ""
-    telemetryDisabled: ""
-    publicSocketUrl: ""
-  # Clerk authentication
-  clerk:
-    secretKey: ""
-    publishableKey: ""
-  # PostHog analytics
-  posthog:
-    host: ""
-  # Sentry error tracking
-  sentry:
-    dsn: ""
-    authToken: ""
-    organization: ""
-    project: ""
-  cloudinary:
-    url: ""
+  secretName: vocab-fe-env
 
 serviceAccount:
   create: false

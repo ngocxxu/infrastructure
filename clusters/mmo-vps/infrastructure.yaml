@@ -1,0 +1,19 @@
+# Infrastructure Layer - Must run first
+# Installs Helm Repositories and Operators (Doppler, etc.)
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infrastructure
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: infra-repo
+    namespace: flux-system
+  path: ./clusters/mmo-vps/infrastructure
+  prune: true
+  wait: true
+

@@ -10,42 +10,11 @@ nameOverride: ""
 fullnameOverride: ""
 
 # Secrets configuration
+# Secret name from DopplerSecret managedSecret.name
+# This secret is automatically created by Doppler Operator
 secrets:
-  enabled: false
-  database:
-    url: ""
-  api:
-    prefix: ""
-    port: ""
-    corsOrigins: ""
-  swagger:
-    enable: ""
-  jwt:
-    secret: ""
-    issuer: ""
-  health:
-    token: ""
-  passengers:
-    allowed: ""
-  supabase:
-    url: ""
-    key: ""
-  redis:
-    url: ""
-  email:
-    user: ""
-    password: ""
-  frontend:
-    url: ""
-  fcm:
-    projectId: ""
-    privateKey: ""
-    clientEmail: ""
-  gemini:
-    apiKey: ""
-  cloudinary:
-    url: ""
-
+  enabled: true
+  secretName: vocab-be-env
 
 serviceAccount:
   create: false
@@ -74,7 +43,7 @@ ingress:
         - path: /
           pathType: Prefix
 
-resources: 
+resources:
   limits:
     memory: 120Mi
     # cpu: 200m

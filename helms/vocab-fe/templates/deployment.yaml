@@ -63,7 +63,7 @@ spec:
           {{- if .Values.secrets.enabled }}
           envFrom:
             - secretRef:
-                name: {{ include "vocab-fe.fullname" . }}-secrets
+                name: {{ .Values.secrets.secretName | default (printf "%s-secrets" (include "vocab-fe.fullname" .)) }}
           {{- end }}
       {{- with .Values.volumes }}
       volumes:

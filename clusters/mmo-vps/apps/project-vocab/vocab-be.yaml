@@ -1,0 +1,17 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: vocab-be
+  namespace: project-vocab
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./helms/vocab-be
+      sourceRef:
+        kind: GitRepository
+        name: infra-repo
+        namespace: flux-system
+  targetNamespace: project-vocab
+  install:
+    createNamespace: true

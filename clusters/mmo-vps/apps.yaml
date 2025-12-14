@@ -13,12 +13,12 @@ spec:
     branch: main # Branch to follow (usually main or master)
 
 ---
-# Part 2: Declare Installation (KUSTOMIZATION)
-# Define the synchronization from the source to K3s
+# Apps Layer - Depends on infrastructure
+# Installs applications, databases, and project resources
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: install-apps # Name of the installation task
+  name: apps
   namespace: flux-system
 spec:
   interval: 1m
@@ -26,7 +26,10 @@ spec:
   timeout: 5m
   sourceRef:
     kind: GitRepository
-    name: infra-repo # Must be the same as Part 1 above
-  path: ./clusters/mmo-vps/helm-releases # <--- Path to the folder containing Helm releases
-  prune: true # Important: If you delete the file on Git, it will delete the app in K3s
-  wait: true # Wait for the app to run stable before reporting success
+    name: infra-repo
+    namespace: flux-system
+  path: ./clusters/mmo-vps/apps
+  dependsOn:
+    - name: infrastructure
+  prune: true
+  wait: true

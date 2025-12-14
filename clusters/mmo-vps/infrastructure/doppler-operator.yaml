@@ -1,0 +1,25 @@
+# Doppler Kubernetes Operator
+# This must be installed before any DopplerSecret resources
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: doppler-kubernetes-operator
+  namespace: flux-system
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: doppler-operator
+      sourceRef:
+        kind: HelmRepository
+        name: doppler-helm
+        namespace: flux-system
+      version: "1.x"
+  values:
+    serviceToken:
+      valueFrom:
+        secretKeyRef:
+          name: doppler-token
+          key: serviceToken
+          namespace: flux-system
+
