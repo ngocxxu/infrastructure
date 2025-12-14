@@ -7,7 +7,7 @@ metadata:
   namespace: monitoring
 spec:
   interval: 5m
-  releaseName: weave-gitops  
+  releaseName: weave-gitops
   chart:
     spec:
       chart: weave-gitops
@@ -36,6 +36,13 @@ spec:
             - path: /
               pathType: Prefix
     extraEnvVarsSecret: weave-gitops-env
+    resources:
+      limits:
+        cpu: 50m
+        memory: 50Mi
+      requests:
+        cpu: 20m
+        memory: 25Mi
   valuesFrom:
     - kind: Secret
       name: weave-gitops-env
