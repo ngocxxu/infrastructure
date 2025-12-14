@@ -21,8 +21,7 @@ spec:
   values:
     adminUser:
       create: true
-      # Password will be loaded from environment variable ADMIN_PASSWORD
-      # which comes from Doppler-managed Secret via envFrom
+      username: admin
     service:
       type: ClusterIP
       port: 9001
@@ -35,7 +34,9 @@ spec:
           paths:
             - path: /
               pathType: Prefix
-    # Load all environment variables from Doppler secret
-    # This will include ADMIN_PASSWORD and other configs
-    # Password should be stored in Doppler as ADMIN_PASSWORD (UPPERCASE)
     extraEnvVarsSecret: weave-gitops-env
+  valuesFrom:
+    - kind: Secret
+      name: weave-gitops-env
+      valuesKey: ADMIN_PASSWORD_HASH
+      targetPath: adminUser.passwordHash
