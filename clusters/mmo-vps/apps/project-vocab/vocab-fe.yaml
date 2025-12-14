@@ -5,6 +5,7 @@ metadata:
   namespace: project-vocab
 spec:
   interval: 5m
+  releaseName: vocab-fe
   chart:
     spec:
       chart: ./helms/vocab-fe

@@ -4,4 +4,6 @@ resources:
 - gotk-components.yaml
 - gotk-sync.yaml
 - infrastructure.yaml
-- apps.yaml
+- apps-shared.yaml
+- apps-project-vocab.yaml
+- apps-monitoring.yaml
