@@ -13,7 +13,7 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: weave-gitops
-        namespace: monitoring
+        namespace: flux-system
       version: "4.0.x"
   targetNamespace: monitoring
   install:
