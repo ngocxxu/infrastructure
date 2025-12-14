@@ -1,18 +1,3 @@
----
-# Part 1: Declare Source (SOURCE)
-# Define the repository where the code is located
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: GitRepository
-metadata:
-  name: infra-repo # Name of the source
-  namespace: flux-system # Must be in this namespace
-spec:
-  interval: 1m # Check Git every 1 minute
-  url: https://github.com/ngocxxu/infrastructure
-  ref:
-    branch: main # Branch to follow (usually main or master)
-
----
 # Apps Layer - Depends on infrastructure
 # Installs applications, databases, and project resources
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -26,7 +11,7 @@ spec:
   timeout: 5m
   sourceRef:
     kind: GitRepository
-    name: infra-repo
+    name: flux-system
     namespace: flux-system
   path: ./clusters/mmo-vps/apps
   dependsOn:

@@ -11,7 +11,7 @@ spec:
   timeout: 5m
   sourceRef:
     kind: GitRepository
-    name: infra-repo
+    name: flux-system
     namespace: flux-system
   path: ./clusters/mmo-vps/infrastructure
   prune: true
