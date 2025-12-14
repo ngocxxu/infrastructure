@@ -5,6 +5,7 @@ metadata:
   namespace: shared
 spec:
   interval: 5m
+  releaseName: postgresql
   chart:
     spec:
       chart: postgresql
