@@ -16,6 +16,5 @@ spec:
   path: ./clusters/mmo-vps/apps/shared
   dependsOn:
     - name: infrastructure
-    - name: apps-shared-secrets
   prune: true
   wait: true
