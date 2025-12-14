@@ -15,4 +15,4 @@ spec:
         kind: HelmRepository
         name: doppler-helm
         namespace: flux-system
-      version: "1.x"
+      version: ">= 1.4.0"

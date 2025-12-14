@@ -1,6 +1,7 @@
 # Force sync for flux
 ```bash
-flux reconcile kustomization flux-system --with-source
+flux reconcile source helm doppler-helm -n flux-system
+flux reconcile helmrelease doppler-kubernetes-operator -n flux-system
 ```
 
 # Status settings of each apps
