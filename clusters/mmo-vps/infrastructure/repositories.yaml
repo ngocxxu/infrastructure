@@ -17,7 +17,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 1h
-  url: https://charts.doppler.com
+  url: https://helm.doppler.com
 
 ---
 # Helm Repository for Weave GitOps
@@ -28,5 +28,5 @@ metadata:
   namespace: flux-system
 spec:
   interval: 1h
-  url: https://charts.gitops.weave.works
-
+  type: oci
+  url: oci://ghcr.io/weaveworks/chartss
