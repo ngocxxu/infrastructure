@@ -15,9 +15,9 @@ spec:
         name: weave-gitops
         namespace: flux-system
       version: "4.0.x"
-  targetNamespace: flux-system
+  targetNamespace: monitoring
   install:
-    createNamespace: false
+    createNamespace: true
   values:
     adminUser:
       create: true
@@ -40,3 +40,4 @@ spec:
       name: weave-gitops-env
       valuesKey: ADMIN_PASSWORD_HASH
       targetPath: adminUser.passwordHash
+      optional: true
