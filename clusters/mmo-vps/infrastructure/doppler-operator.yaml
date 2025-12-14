@@ -10,7 +10,7 @@ spec:
   timeout: 5m
   chart:
     spec:
-      chart: doppler-operator
+      chart: doppler-kubernetes-operator
       sourceRef:
         kind: HelmRepository
         name: doppler-helm
