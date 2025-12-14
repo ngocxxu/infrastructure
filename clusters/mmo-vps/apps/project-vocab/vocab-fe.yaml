@@ -10,7 +10,7 @@ spec:
       chart: ./helms/vocab-fe
       sourceRef:
         kind: GitRepository
-        name: infra-repo
+        name: flux-system
         namespace: flux-system
   targetNamespace: project-vocab
   install:
