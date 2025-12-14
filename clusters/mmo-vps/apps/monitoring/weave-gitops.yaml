@@ -4,7 +4,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: weave-gitops
-  namespace: flux-system
+  namespace: monitoring
 spec:
   interval: 5m
   chart:
@@ -13,7 +13,7 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: weave-gitops
-        namespace: flux-system
+        namespace: monitoring
       version: "4.0.x"
   targetNamespace: monitoring
   install:
