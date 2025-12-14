@@ -39,4 +39,3 @@ spec:
     # This will include ADMIN_PASSWORD and other configs
     # Password should be stored in Doppler as ADMIN_PASSWORD (UPPERCASE)
     extraEnvVarsSecret: weave-gitops-env
-
