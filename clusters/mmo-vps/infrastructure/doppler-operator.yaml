@@ -7,6 +7,9 @@ metadata:
   namespace: flux-system
 spec:
   interval: 5m
+  install:
+    wait: true
+    timeout: 5m
   chart:
     spec:
       chart: doppler-operator
@@ -19,7 +22,7 @@ spec:
     serviceToken:
       valueFrom:
         secretKeyRef:
-          name: doppler-token
+          name: doppler-token-infrastructure
           key: serviceToken
           namespace: flux-system
 
