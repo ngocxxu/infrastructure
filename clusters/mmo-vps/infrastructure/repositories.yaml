@@ -19,3 +19,14 @@ spec:
   interval: 1h
   url: https://charts.doppler.com
 
+---
+# Helm Repository for Weave GitOps
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: weave-gitops
+  namespace: flux-system
+spec:
+  interval: 1h
+  url: https://charts.gitops.weave.works
+

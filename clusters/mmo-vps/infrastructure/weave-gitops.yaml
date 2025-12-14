@@ -1,0 +1,42 @@
+# Weave GitOps UI Dashboard
+# Provides web UI for FluxCD management and monitoring
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: weave-gitops
+  namespace: flux-system
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: weave-gitops
+      sourceRef:
+        kind: HelmRepository
+        name: weave-gitops
+        namespace: flux-system
+      version: "0.x"
+  targetNamespace: flux-system
+  install:
+    createNamespace: false
+  values:
+    adminUser:
+      create: true
+      # Password will be loaded from environment variable ADMIN_PASSWORD
+      # which comes from Doppler-managed Secret via envFrom
+    service:
+      type: ClusterIP
+      port: 9001
+    ingress:
+      enabled: true
+      className: "traefik"
+      annotations: {}
+      hosts:
+        - host: gitops.ngocquach.top
+          paths:
+            - path: /
+              pathType: Prefix
+    # Load all environment variables from Doppler secret
+    # This will include ADMIN_PASSWORD and other configs
+    # Password should be stored in Doppler as ADMIN_PASSWORD (UPPERCASE)
+    extraEnvVarsSecret: weave-gitops-env
+
