@@ -16,10 +16,8 @@ spec:
         name: doppler-helm
         namespace: flux-system
       version: "1.x"
-  values:
-    serviceToken:
-      valueFrom:
-        secretKeyRef:
-          name: doppler-token-infrastructure
-          key: serviceToken
-          namespace: flux-system
+  valuesFrom:
+      - kind: Secret
+        name: doppler-token-infrastructure  # Name of the Secret containing the token
+        valuesKey: serviceToken             # Key in the secret (e.g. serviceToken)
+        targetPath: serviceToken            # Path in the HelmRelease values
