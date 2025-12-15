@@ -6,6 +6,9 @@ metadata:
 spec:
   interval: 5m
   releaseName: vocab-be
+  dependsOn:
+    - name: postgresql
+      namespace: shared
   chart:
     spec:
       chart: ./helms/vocab-be
@@ -16,3 +19,15 @@ spec:
   targetNamespace: project-vocab
   install:
     createNamespace: true
+    timeout: 15m
+    disableWaitForJobs: true
+    remediation:
+      retries: 2
+      remediateLastFailure: true
+  upgrade:
+    timeout: 15m
+    disableWaitForJobs: true
+    remediation:
+      retries: 2
+      remediateLastFailure: true
+      strategy: uninstall
