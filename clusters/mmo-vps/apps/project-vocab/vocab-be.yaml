@@ -16,11 +16,4 @@ spec:
   targetNamespace: project-vocab
   install:
     createNamespace: true
-    remediation:
-      retries: 3
-      remediateLastFailure: true
-  upgrade:
-    remediation:
-      retries: 3
-      remediateLastFailure: true
-      strategy: uninstall
+
