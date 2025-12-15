@@ -37,10 +37,9 @@ spec:
           {{- if .Values.secrets.enabled }}
           envFrom:
             - secretRef:
-                name: {{ include "vocab-be.fullname" . }}-secrets
+                name: {{ .Values.secrets.secretName | default (printf "%s-secrets" (include "vocab-be.fullname" .)) }}
           {{- end }}
           {{- with .Values.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-

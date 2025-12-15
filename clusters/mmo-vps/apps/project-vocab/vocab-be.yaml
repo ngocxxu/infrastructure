@@ -16,4 +16,3 @@ spec:
   targetNamespace: project-vocab
   install:
     createNamespace: true
-
