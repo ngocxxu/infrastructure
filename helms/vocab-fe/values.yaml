@@ -38,7 +38,7 @@ ingress:
   className: "traefik"
   annotations: {}
   hosts:
-    - host: vocab.ngocquach.top
+    - host: vocab.ngocquach.com
       paths:
         - path: /
           pathType: Prefix
