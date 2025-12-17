@@ -1,0 +1,61 @@
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: vocab-be-latest
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: vocab-be
+  filterTags:
+    pattern: ^latest$
+  policy:
+    alphabetical:
+      order: asc
+
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: vocab-be-semver
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: vocab-be
+  filterTags:
+    pattern: ^(?P<version>0\.2\.\d+)$
+    extract: $version
+  policy:
+    semver:
+      range: ">=0.1.0"
+
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: vocab-fe-latest
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: vocab-fe
+  filterTags:
+    pattern: ^latest$
+  policy:
+    alphabetical:
+      order: asc
+
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: vocab-fe-semver
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: vocab-fe
+  filterTags:
+    pattern: ^(?P<version>0\.2\.\d+)$
+    extract: $version
+  policy:
+    semver:
+      range: ">=0.1.0"
+

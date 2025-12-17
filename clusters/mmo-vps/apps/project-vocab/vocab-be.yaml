@@ -6,6 +6,10 @@ metadata:
 spec:
   interval: 5m
   releaseName: vocab-be
+  values:
+    image:
+      repository: ngocxxu/vocab-be
+      tag: latest # {"$imagepolicy": "flux-system:vocab-be-semver"}
   dependsOn:
     - name: postgresql
       namespace: shared

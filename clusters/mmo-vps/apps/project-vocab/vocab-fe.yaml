@@ -6,6 +6,10 @@ metadata:
 spec:
   interval: 5m
   releaseName: vocab-fe
+  values:
+    image:
+      repository: ngocxxu/vocab-fe
+      tag: latest # {"$imagepolicy": "flux-system:vocab-fe-semver"}
   chart:
     spec:
       chart: ./helms/vocab-fe
