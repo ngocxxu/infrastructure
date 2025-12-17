@@ -22,7 +22,7 @@ spec:
   imageRepositoryRef:
     name: vocab-be
   filterTags:
-    pattern: ^(?P<version>0\.2\.\d+)$
+    pattern: ^(?P<version>\d+\.\d+\.\d+)$
     extract: $version
   policy:
     semver:
@@ -53,7 +53,7 @@ spec:
   imageRepositoryRef:
     name: vocab-fe
   filterTags:
-    pattern: ^(?P<version>0\.2\.\d+)$
+    pattern: ^(?P<version>\d+\.\d+\.\d+)$
     extract: $version
   policy:
     semver:
