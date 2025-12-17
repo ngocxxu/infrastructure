@@ -19,8 +19,6 @@ spec:
       messageTemplate: "chore(images): update project-vocab images"
     push:
       branch: main
-    secretRef:
-      name: image-updater-git-auth
   update:
     path: ./clusters/mmo-vps/apps/project-vocab
     strategy: Setters
