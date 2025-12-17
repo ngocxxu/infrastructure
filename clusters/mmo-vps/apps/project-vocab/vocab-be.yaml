@@ -9,7 +9,7 @@ spec:
   values:
     image:
       repository: ngocxxu/vocab-be
-      tag: latest # {"$imagepolicy": "flux-system:vocab-be-semver"}
+      tag: docker.io/ngocxxu/vocab-be:0.2.26 # {"$imagepolicy": "flux-system:vocab-be-semver"}
   dependsOn:
     - name: postgresql
       namespace: shared
