@@ -125,3 +125,5 @@ key.txt
 *.tgz
 
 .vault_pass
+
+.cursor/
