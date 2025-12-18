@@ -17,7 +17,7 @@ spec:
     createNamespace: true
   targetNamespace: monitoring
 
-  # 1. Configure inject Secret from DopplerSecret
+  # 1. Inject Secrets
   valuesFrom:
     - kind: Secret
       name: grafana-cloud-env
@@ -44,7 +44,7 @@ spec:
       valuesKey: GRAFANA_LOKI_PASSWORD
       targetPath: externalServices.loki.basicAuth.password
 
-  # 2. Configure Values for k8s-monitoring
+  # 2. Configure Values
   values:
     cluster:
       name: "mmo-vps"
@@ -57,6 +57,7 @@ spec:
         secret:
           create: false
 
+    # Metrics
     metrics:
       enabled: true
       cost:
@@ -75,6 +76,9 @@ spec:
             regex: "container_network_.*"
             sourceLabels: ["__name__"]
 
+      kubelet:
+        enabled: true
+
       autoDiscover:
         enabled: false
 
@@ -91,6 +95,7 @@ spec:
           - shared
           - project-vocab
 
+    # Disable unnecessary features to save RAM
     opencost:
       enabled: false
     kepler:
