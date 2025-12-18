@@ -5,10 +5,11 @@ metadata:
   namespace: monitoring
 spec:
   interval: 1h
+  timeout: 10m
   chart:
     spec:
       chart: k8s-monitoring
-      version: "1.6.5" # Stable version
+      version: "1.6.5"
       sourceRef:
         kind: HelmRepository
         name: grafana
@@ -52,16 +53,22 @@ spec:
       prometheus:
         secret:
           create: true
-          name: "prometheus-k8s-monitoring"
+          name: prometheus-k8s-monitoring
+          namespace: monitoring
       loki:
         secret:
           create: true
-          name: "loki-k8s-monitoring"
+          name: loki-k8s-monitoring
+          namespace: monitoring
+
+    opencost:
+      enabled: false
 
     metrics:
       enabled: true
       cost:
         enabled: false
+      
       node-exporter:
         enabled: true
       kube-state-metrics:
@@ -75,7 +82,6 @@ spec:
             memory: 200Mi
           limits:
             memory: 500Mi
-
         extraRelabelingRules: |
           rule {
             action        = "drop"
@@ -99,8 +105,9 @@ spec:
           - monitoring
           - shared
           - project-vocab
+      
       cluster_events:
-        enabled: true
+        enabled: false 
 
     receivers:
       grpc: { enabled: false }
