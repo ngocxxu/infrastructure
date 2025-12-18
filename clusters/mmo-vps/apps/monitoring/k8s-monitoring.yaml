@@ -8,7 +8,7 @@ spec:
   chart:
     spec:
       chart: k8s-monitoring
-      version: "^3.6.0" # Latest V3
+      version: "1.6.5"
       sourceRef:
         kind: HelmRepository
         name: grafana
@@ -18,103 +18,101 @@ spec:
     createNamespace: true
   targetNamespace: monitoring
 
-  # ⚠️ CRITICAL UPDATE: Updated 'targetPath' to match V3 'destinations' structure
-  # V3 uses an array for destinations, so we use index [0] and [1]
+  # 1. Inject Secrets
   valuesFrom:
-    # Destination [0]: Prometheus
     - kind: Secret
       name: grafana-cloud-env
       valuesKey: GRAFANA_PROMETHEUS_HOST
-      targetPath: destinations[0].url
+      targetPath: externalServices.prometheus.host
     - kind: Secret
       name: grafana-cloud-env
       valuesKey: GRAFANA_PROMETHEUS_USERNAME
-      targetPath: destinations[0].auth.username
+      targetPath: externalServices.prometheus.basicAuth.username
     - kind: Secret
       name: grafana-cloud-env
       valuesKey: GRAFANA_PROMETHEUS_PASSWORD
-      targetPath: destinations[0].auth.password
-    
-    # Destination [1]: Loki
+      targetPath: externalServices.prometheus.basicAuth.password
     - kind: Secret
       name: grafana-cloud-env
       valuesKey: GRAFANA_LOKI_HOST
-      targetPath: destinations[1].url
+      targetPath: externalServices.loki.host
     - kind: Secret
       name: grafana-cloud-env
       valuesKey: GRAFANA_LOKI_USERNAME
-      targetPath: destinations[1].auth.username
+      targetPath: externalServices.loki.basicAuth.username
     - kind: Secret
       name: grafana-cloud-env
       valuesKey: GRAFANA_LOKI_PASSWORD
-      targetPath: destinations[1].auth.password
+      targetPath: externalServices.loki.basicAuth.password
 
-  # 2. Configure Values (Migrated to V3 Schema)
+  # 2. Configure Values (V1 Legacy Style - Simple & Working)
   values:
     cluster:
       name: "mmo-vps"
 
-    # --- MIGRATION: externalServices -> destinations ---
-    destinations:
-      - name: prometheus
-        type: prometheus
-        auth:
-          type: basic
-      - name: loki
-        type: loki
-        auth:
-          type: basic
+    # Destination configuration (V1 style)
+    externalServices:
+      prometheus:
+        secret:
+          create: false # Use injected secrets
+      loki:
+        secret:
+          create: false
 
-    # --- MIGRATION: metrics -> clusterMetrics ---
-    clusterMetrics:
+    # Metrics Configuration
+    metrics:
       enabled: true
-      # Disable OpenCost to save resources (was 'metrics.cost' in V1)
-      opencost:
+      # V1 uses 'cost' (not opencost)
+      cost:
         enabled: false
-      
-      # V3 uses camelCase keys
-      nodeExporter:
-        enabled: true
-      kubelet:
-        enabled: true
-      kubeStateMetrics:
-        enabled: true
-      cadvisor:
-        enabled: true
-        # Drop high-cardinality network metrics
-        extraMetricProcessingRules: |-
-          action = "drop"
-          source_labels = ["__name__"]
-          regex = "container_network_.*"
 
-    # --- MIGRATION: logs -> podLogs ---
-    podLogs:
-      enabled: true
-      namespaces:
-        - default
-        - kube-system
-        - flux-system
-        - monitoring
-        - shared
-        - project-vocab
+      node-exporter:
+        enabled: true
 
-    # --- MIGRATION: Cluster Events ---
-    clusterEvents:
-      enabled: true
+      kube-state-metrics:
+        enabled: true
 
-    # --- Disable Heavy Features ---
-    # Explicitly disable these features at root level if they exist
-    kepler:
-      enabled: false
-    beyla:
-      enabled: false
-    
-    # Configure Alloy (Agent) resources
-    alloy:
-      alloy-metrics:
+      # V1 Agent configuration for filtering metrics
+      agent:
+        enabled: true
+        # Resource limits for the agent pod
         resources:
           requests:
             cpu: 50m
             memory: 200Mi
           limits:
             memory: 500Mi
+        # Metric filtering rules (V1 Syntax)
+        extraRelabelingRules: |
+          - action: drop
+            source_labels: [__name__]
+            regex: "container_network_.*"
+          - action: drop
+            source_labels: [__name__]
+            regex: "kube_pod_owner"
+
+    # Logs Configuration
+    logs:
+      enabled: true
+      pod_logs:
+        enabled: true
+        namespaces:
+          - default
+          - kube-system
+          - flux-system
+          - monitoring
+          - shared
+          - project-vocab
+
+      cluster_events:
+        enabled: true
+
+    # Disable unused receivers
+    receivers:
+      grpc: { enabled: false }
+      http: { enabled: false }
+      zipkin: { enabled: false }
+
+    # Disable Kepler (V1 syntax might differ, but this is safe)
+    kepler:
+      enabled: false
