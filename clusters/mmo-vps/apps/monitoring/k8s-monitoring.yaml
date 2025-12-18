@@ -49,25 +49,36 @@ spec:
     cluster:
       name: "mmo-vps"
 
-    # Metrics Tuning (Keep as you did is very good for free package)
+    externalServices:
+      prometheus:
+        secret:
+          create: false
+      loki:
+        secret:
+          create: false
+
     metrics:
       enabled: true
       cost:
         enabled: false
+
       node-exporter:
         enabled: true
+
       kube-state-metrics:
         enabled: true
-      agent:
-        extraRelabelingRules: |
-          - action: drop
-            source_labels: [__name__]
-            regex: "grafana_agent_.*|alloy_.*"
-          - action: drop
-            source_labels: [__name__]
-            regex: "container_network_.*"
 
-    # Logs Tuning
+      cadvisor:
+        enabled: true
+        metricRelabelings:
+          - action: drop
+            regex: "container_network_.*"
+            sourceLabels: ["__name__"]
+
+      autoDiscover:
+        enabled: false
+
+    # Logs
     logs:
       enabled: true
       pod_logs:
@@ -78,12 +89,16 @@ spec:
           - flux-system
           - monitoring
           - shared
-          - project-vocab # Only get logs of these namespaces
+          - project-vocab
 
-    # Disable unnecessary features to save RAM
+    opencost:
+      enabled: false
+    kepler:
+      enabled: false
+    beyla:
+      enabled: false
+
     receivers:
       grpc: { enabled: false }
       http: { enabled: false }
       zipkin: { enabled: false }
-    opencost: { enabled: false }
-    kepler: { enabled: false }
