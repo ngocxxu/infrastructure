@@ -51,10 +51,12 @@ spec:
     externalServices:
       prometheus:
         secret:
-          create: false
+          create: true
+          name: "prometheus-k8s-monitoring"
       loki:
         secret:
-          create: false
+          create: true
+          name: "loki-k8s-monitoring"
 
     metrics:
       enabled: true
@@ -73,7 +75,7 @@ spec:
             memory: 200Mi
           limits:
             memory: 500Mi
-        
+
         extraRelabelingRules: |
           rule {
             action        = "drop"
