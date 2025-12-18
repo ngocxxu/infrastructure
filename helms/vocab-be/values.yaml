@@ -43,13 +43,13 @@ ingress:
         - path: /
           pathType: Prefix
 
-# resources:
-#   limits:
-#     memory: 120Mi
-#     cpu: 120m
-#   requests:
-#     memory: 60Mi
-#     cpu: 60m
+resources:
+  limits:
+    memory: 120Mi
+    cpu: 120m
+  requests:
+    memory: 60Mi
+    cpu: 60m
 
 # livenessProbe:
 #   httpGet:
