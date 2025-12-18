@@ -8,6 +8,7 @@ spec:
   chart:
     spec:
       chart: k8s-monitoring
+      # Stick to version 1.6.5 (Stable V1 architecture)
       version: "1.6.5"
       sourceRef:
         kind: HelmRepository
@@ -18,7 +19,7 @@ spec:
     createNamespace: true
   targetNamespace: monitoring
 
-  # 1. Inject Secrets
+  # 1. Inject Secrets (Standard V1 method)
   valuesFrom:
     - kind: Secret
       name: grafana-cloud-env
@@ -45,7 +46,7 @@ spec:
       valuesKey: GRAFANA_LOKI_PASSWORD
       targetPath: externalServices.loki.basicAuth.password
 
-  # 2. Configure Values (V1 Legacy Style - Simple & Working)
+  # 2. Configure Values (Fixed key names for v1.6.5)
   values:
     cluster:
       name: "mmo-vps"
@@ -54,7 +55,7 @@ spec:
     externalServices:
       prometheus:
         secret:
-          create: false # Use injected secrets
+          create: false
       loki:
         secret:
           create: false
@@ -62,27 +63,29 @@ spec:
     # Metrics Configuration
     metrics:
       enabled: true
-      # V1 uses 'cost' (not opencost)
+      
+      # V1 uses 'cost' (Valid in 1.6.5)
       cost:
         enabled: false
-
+      
       node-exporter:
         enabled: true
-
+      
       kube-state-metrics:
         enabled: true
 
-      # V1 Agent configuration for filtering metrics
-      agent:
+      # FIX: Renamed from 'agent' to 'alloy' as per error message
+      alloy:
         enabled: true
-        # Resource limits for the agent pod
+        # Resource limits for the Alloy pod
         resources:
           requests:
             cpu: 50m
             memory: 200Mi
           limits:
             memory: 500Mi
-        # Metric filtering rules (V1 Syntax)
+        
+        # Metric filtering rules
         extraRelabelingRules: |
           - action: drop
             source_labels: [__name__]
@@ -103,7 +106,7 @@ spec:
           - monitoring
           - shared
           - project-vocab
-
+      
       cluster_events:
         enabled: true
 
@@ -112,7 +115,7 @@ spec:
       grpc: { enabled: false }
       http: { enabled: false }
       zipkin: { enabled: false }
-
-    # Disable Kepler (V1 syntax might differ, but this is safe)
+    
+    # Disable Kepler
     kepler:
       enabled: false
