@@ -5,10 +5,10 @@ metadata:
   namespace: monitoring
 spec:
   interval: 1h
-
   chart:
     spec:
       chart: k8s-monitoring
+      # Use the latest version 3.x
       version: "^3.6.0"
       sourceRef:
         kind: HelmRepository
@@ -17,93 +17,117 @@ spec:
 
   install:
     createNamespace: true
-
   targetNamespace: monitoring
 
-  # 1. Inject secrets from DopplerSecret
+  # 1. Inject secrets from Kubernetes Secret (managed by Doppler/SOPS)
   valuesFrom:
     - kind: Secret
       name: grafana-cloud-env
       valuesKey: GRAFANA_PROMETHEUS_HOST
       targetPath: externalServices.prometheus.host
-
     - kind: Secret
       name: grafana-cloud-env
       valuesKey: GRAFANA_PROMETHEUS_USERNAME
       targetPath: externalServices.prometheus.basicAuth.username
-
     - kind: Secret
       name: grafana-cloud-env
       valuesKey: GRAFANA_PROMETHEUS_PASSWORD
       targetPath: externalServices.prometheus.basicAuth.password
-
     - kind: Secret
       name: grafana-cloud-env
       valuesKey: GRAFANA_LOKI_HOST
       targetPath: externalServices.loki.host
-
     - kind: Secret
       name: grafana-cloud-env
       valuesKey: GRAFANA_LOKI_USERNAME
       targetPath: externalServices.loki.basicAuth.username
-
     - kind: Secret
       name: grafana-cloud-env
       valuesKey: GRAFANA_LOKI_PASSWORD
       targetPath: externalServices.loki.basicAuth.password
 
-  # 2. Configure Values
+  # 2. Configure Values (V3 Standard)
   values:
     cluster:
       name: "mmo-vps"
 
-    # Don't create secret because we inject from valuesFrom
     externalServices:
       prometheus:
         secret:
-          create: false
+          create: false # Disable internal secret creation, use injected values
       loki:
         secret:
           create: false
 
+    # Configure Alloy Controller (The Agent)
     alloy:
-      enabled: true
+      controller:
+        resources:
+          # Limit memory usage for small VPS (5GB RAM total)
+          requests:
+            cpu: 50m
+            memory: 200Mi
+          limits:
+            memory: 500Mi
 
-      # Reduce RAM for small VPS
-      resources:
-        requests:
-          cpu: 50m
-          memory: 200Mi
-        limits:
-          memory: 400Mi
-
+    # METRICS: Configure specific collectors using camelCase (V3 Requirement)
     metrics:
-      pipelines:
-        kubernetes:
-          enabled: true
+      enabled: true
+      
+      # Node Exporter: VPS System Metrics (CPU/RAM/Disk)
+      nodeExporter:
+        enabled: true
+      
+      # Kube State Metrics: Pod/Deployment status
+      kubeStateMetrics:
+        enabled: true
 
-          # Reduce cardinality
-          metricRelabelings:
-            - action: drop
-              regex: "container_network_.*"
-              sourceLabels: ["__name__"]
+      # Kubelet: Kubernetes Node Metrics
+      kubelet:
+        enabled: true
 
+      # cAdvisor: Container Metrics
+      cadvisor:
+        enabled: true
+        # Filter out high-cardinality metrics to save costs/resources
+        metricRelabelings:
+          - action: drop
+            regex: "container_network_.*"
+            sourceLabels: ["__name__"]
+
+      # Disable auto-discovery to reduce overhead
+      autoDiscover:
+        enabled: false
+
+    # LOGS: Configure Pod Logs collection
     logs:
-      pipelines:
-        kubernetes:
-          enabled: true
-          namespaces:
-            - default
-            - kube-system
-            - flux-system
-            - monitoring
-            - shared
-            - project-vocab
+      enabled: true
+      pod_logs:
+        enabled: true
+        # Only collect logs from specific namespaces
+        namespaces:
+          - default
+          - kube-system
+          - flux-system
+          - monitoring
+          - shared
+          - project-vocab
 
-    # Disable all features that consume resources
-    cost:
+    # DISABLE HEAVY/UNNECESSARY FEATURES
+    # IMPORTANT: Use 'opencost' instead of 'cost' (V1 legacy)
+    opencost:
       enabled: false
+    
+    # Disable Kepler (Power consumption metrics)
     kepler:
       enabled: false
+    
+    # Disable Beyla (eBPF Application Observability - High Resource Usage)
     beyla:
       enabled: false
+
+    # Disable unused receivers
+    receivers:
+      grpc: { enabled: false }
+      http: { enabled: false }
+      zipkin: { enabled: false }
