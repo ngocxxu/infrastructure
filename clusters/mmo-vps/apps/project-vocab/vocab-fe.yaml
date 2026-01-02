@@ -8,7 +8,7 @@ spec:
   releaseName: vocab-fe
   values:
     image:
-      ref: docker.io/ngocxxu/vocab-fe:1.16.5 # {"$imagepolicy": "flux-system:vocab-fe-semver"}
+      ref: docker.io/ngocxxu/vocab-fe:1.16.6 # {"$imagepolicy": "flux-system:vocab-fe-semver"}
   chart:
     spec:
       chart: ./helms/vocab-fe
