@@ -1,0 +1,22 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: paracord-store-fe
+  namespace: project-paracord-store
+spec:
+  interval: 5m
+  releaseName: paracord-store-fe
+  values:
+    image:
+      ref: docker.io/ngocxxu/paracord-store-fe:latest # {"$imagepolicy": "flux-system:paracord-store-fe-semver"}
+  chart:
+    spec:
+      chart: ./helms/paracord-store-fe
+      sourceRef:
+        kind: GitRepository
+        name: flux-system
+        namespace: flux-system
+      reconcileStrategy: Revision
+  targetNamespace: project-paracord-store
+  install:
+    createNamespace: true

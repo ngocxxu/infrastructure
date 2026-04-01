@@ -30,3 +30,15 @@ metadata:
   labels:
     name: monitoring
     purpose: monitoring
+
+---
+# Namespace for Paracord Store project
+# Contains all Paracord Store application resources: Frontend, Backend
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: project-paracord-store
+  labels:
+    name: project-paracord-store
+    purpose: project-isolation
+    project: paracord-store

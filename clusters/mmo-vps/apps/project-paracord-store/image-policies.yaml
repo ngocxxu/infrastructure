@@ -1,0 +1,61 @@
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: paracord-store-be-latest
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: paracord-store-be
+  filterTags:
+    pattern: ^latest$
+  policy:
+    alphabetical:
+      order: asc
+
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: paracord-store-be-semver
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: paracord-store-be
+  filterTags:
+    pattern: ^(?P<version>\d+\.\d+\.\d+)$
+    extract: $version
+  policy:
+    semver:
+      range: ">=0.1.0"
+
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: paracord-store-fe-latest
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: paracord-store-fe
+  filterTags:
+    pattern: ^latest$
+  policy:
+    alphabetical:
+      order: asc
+
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: paracord-store-fe-semver
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: paracord-store-fe
+  filterTags:
+    pattern: ^(?P<version>\d+\.\d+\.\d+)$
+    extract: $version
+  policy:
+    semver:
+      range: ">=0.1.0"
+

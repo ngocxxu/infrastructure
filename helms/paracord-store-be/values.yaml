@@ -1,0 +1,76 @@
+replicaCount: 1
+
+image:
+  repository: ngocxxu/paracord-store-be
+  pullPolicy: Always
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Secrets configuration
+# Secret name from DopplerSecret managedSecret.name
+# This secret is automatically created by Doppler Operator
+secrets:
+  enabled: true
+  secretName: paracord-store-be-env
+
+serviceAccount:
+  create: false
+  automount: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 3000
+
+ingress:
+  enabled: true
+  className: "traefik"
+  annotations: {}
+  hosts:
+    - host: koracord-be.ngocquach.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+# resources:
+#   limits:
+#     memory: 120Mi
+#     cpu: 120m
+#   requests:
+#     memory: 60Mi
+#     cpu: 60m
+
+# livenessProbe:
+#   httpGet:
+#     path: /api/v1/health
+#     port: http
+# readinessProbe:
+#   httpGet:
+#     path: /api/v1/health
+#     port: http
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+volumes: []
+volumeMounts: []
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

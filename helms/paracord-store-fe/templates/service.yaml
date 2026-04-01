@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "paracord-store-fe.fullname" . }}
+  labels:
+    {{- include "paracord-store-fe.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "paracord-store-fe.selectorLabels" . | nindent 4 }}

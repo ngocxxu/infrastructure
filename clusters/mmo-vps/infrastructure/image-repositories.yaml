@@ -11,8 +11,19 @@ spec:
 apiVersion: image.toolkit.fluxcd.io/v1beta2
 kind: ImageRepository
 metadata:
+  name: paracord-store-fe
+  namespace: flux-system
+spec:
+  image: docker.io/ngocxxu/paracord-store-fe
+  interval: 5m
+  
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
   name: vocab-fe
   namespace: flux-system
 spec:
   image: docker.io/ngocxxu/vocab-fe
   interval: 5m
+
