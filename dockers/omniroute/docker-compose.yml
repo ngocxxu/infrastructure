@@ -1,0 +1,20 @@
+services:
+  omniroute:
+    image: diegosouzapw/omniroute:latest
+    container_name: omniroute
+    restart: unless-stopped
+    ports:
+      - "20128:20128"
+    volumes:
+      - omniroute-data:/app/data
+    env_file:
+      - .env   
+    environment:
+      - PORT=20128
+      - NEXT_PUBLIC_BASE_URL=http://localhost:20128
+      - GEMINI_OAUTH_CLIENT_ID=${GEMINI_OAUTH_CLIENT_ID}
+      - GEMINI_CLI_OAUTH_CLIENT_SECRET=${GEMINI_CLI_OAUTH_CLIENT_SECRET}
+      - GEMINI_OAUTH_CLIENT_SECRET=${GEMINI_OAUTH_CLIENT_SECRET}
+
+volumes:
+  omniroute-data:
