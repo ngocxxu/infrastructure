@@ -1,0 +1,24 @@
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageUpdateAutomation
+metadata:
+  name: apps-external-images
+  namespace: flux-system
+spec:
+  interval: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  git:
+    checkout:
+      ref:
+        branch: main
+    commit:
+      author:
+        name: fluxcd-bot
+        email: fluxcd-bot@noreply.ngocquach.com
+      messageTemplate: "chore(images): update apps-external images"
+    push:
+      branch: main
+  update:
+    path: ./clusters/mmo-vps/apps/external
+    strategy: Setters

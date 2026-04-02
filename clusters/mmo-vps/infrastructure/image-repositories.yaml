@@ -16,3 +16,13 @@ metadata:
 spec:
   image: docker.io/ngocxxu/vocab-fe
   interval: 5m
+
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: omniroute
+  namespace: flux-system
+spec:
+  image: docker.io/diegosouzapw/omniroute
+  interval: 5m

@@ -6,4 +6,6 @@ resources:
   - infrastructure.yaml
   - apps-shared.yaml
   - apps-project-vocab.yaml
+  # - apps-project-paracord-store.yaml
   - apps-monitoring.yaml
+  - apps-external.yaml

@@ -1,0 +1,39 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: omniroute
+  namespace: external
+spec:
+  interval: 5m
+  releaseName: omniroute
+  values:
+    image:
+      ref: docker.io/diegosouzapw/omniroute:latest # {"$imagepolicy": "flux-system:omniroute-latest"}
+    resources:
+      requests:
+        memory: 128Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+        cpu: 300m
+  chart:
+    spec:
+      chart: ./helms/omniroute
+      sourceRef:
+        kind: GitRepository
+        name: flux-system
+        namespace: flux-system
+      reconcileStrategy: Revision
+  targetNamespace: external
+  install:
+    createNamespace: true
+    timeout: 15m
+    remediation:
+      retries: 2
+      remediateLastFailure: true
+  upgrade:
+    timeout: 15m
+    remediation:
+      retries: 2
+      remediateLastFailure: true
+      strategy: uninstall
