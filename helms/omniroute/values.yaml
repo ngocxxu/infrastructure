@@ -68,21 +68,21 @@ extraEnv: []
 
 envFromSecret: ""
 
-livenessProbe:
-  httpGet:
-    path: /api/health
-    port: http
-  initialDelaySeconds: 30
-  periodSeconds: 15
-  failureThreshold: 3
+# livenessProbe:
+#   httpGet:
+#     path: /api/health
+#     port: http
+#   initialDelaySeconds: 30
+#   periodSeconds: 15
+#   failureThreshold: 3
 
-readinessProbe:
-  httpGet:
-    path: /api/health
-    port: http
-  initialDelaySeconds: 15
-  periodSeconds: 10
-  failureThreshold: 3
+# readinessProbe:
+#   httpGet:
+#     path: /api/health
+#     port: http
+#   initialDelaySeconds: 15
+#   periodSeconds: 10
+#   failureThreshold: 3
 
 nodeSelector: {}
 tolerations: []
