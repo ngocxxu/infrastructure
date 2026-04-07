@@ -10,7 +10,7 @@ spec:
     ingress:
       enabled: true
     image:
-      ref: docker.io/diegosouzapw/omniroute:3.5.2 # {"$imagepolicy": "flux-system:omniroute-latest"}
+      ref: docker.io/diegosouzapw/omniroute:3.5.2 # {"$imagepolicy": "flux-system:omniroute-3.5.2"}
     resources:
       requests:
         memory: 128Mi
