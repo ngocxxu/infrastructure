@@ -1,0 +1,105 @@
+replicaCount: 1
+
+image:
+  repository: n8nio/n8n
+  pullPolicy: IfNotPresent
+  tag: ""
+  ref: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  fsGroup: 1000
+  fsGroupChangePolicy: OnRootMismatch
+
+securityContext:
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+
+service:
+  type: ClusterIP
+  port: 5678
+  nodePort: ""
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: "traefik"
+  annotations: {}
+  hosts:
+  - host: n8n.ngocquach.com
+    paths:
+    - path: /
+      pathType: Prefix
+  tls: []
+
+resources: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+persistence:
+  enabled: true
+  existingClaim: ""
+  storageClass: "local-path"
+  accessModes:
+  - ReadWriteOnce
+  size: 1Gi
+  annotations:
+    helm.sh/resource-policy: keep
+
+env:
+  GENERIC_TIMEZONE: "Asia/Ho_Chi_Minh"
+  TZ: "Asia/Ho_Chi_Minh"
+  N8N_PORT: "5678"
+  N8N_PROTOCOL: "https"
+  N8N_HOST: "n8n.ngocquach.com"
+  WEBHOOK_URL: "https://n8n.ngocquach.com"
+  N8N_DIAGNOSTICS_ENABLED: "false"
+  N8N_PERSONALIZATION_ENABLED: "false"
+  DB_TYPE: "postgresdb"
+  EXECUTIONS_DATA_PRUNE: "true"
+  EXECUTIONS_DATA_MAX_AGE: "168"
+
+extraEnv: []
+
+envFromSecret: ""
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 15
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  failureThreshold: 3
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+volumes: []
+volumeMounts: []

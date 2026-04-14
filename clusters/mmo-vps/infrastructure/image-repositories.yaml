@@ -6,7 +6,6 @@ metadata:
 spec:
   image: docker.io/ngocxxu/vocab-be
   interval: 5m
-
 ---
 apiVersion: image.toolkit.fluxcd.io/v1beta2
 kind: ImageRepository
@@ -16,7 +15,6 @@ metadata:
 spec:
   image: docker.io/ngocxxu/vocab-fe
   interval: 5m
-
 ---
 apiVersion: image.toolkit.fluxcd.io/v1beta2
 kind: ImageRepository
@@ -25,4 +23,13 @@ metadata:
   namespace: flux-system
 spec:
   image: docker.io/diegosouzapw/omniroute
+  interval: 5m
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: n8n
+  namespace: flux-system
+spec:
+  image: docker.io/n8nio/n8n
   interval: 5m

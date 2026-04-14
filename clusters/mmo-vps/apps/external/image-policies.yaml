@@ -11,3 +11,17 @@ spec:
   policy:
     alphabetical:
       order: asc
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: n8n-latest
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: n8n
+  filterTags:
+    pattern: ^latest$
+  policy:
+    alphabetical:
+      order: asc
