@@ -33,10 +33,6 @@ spec:
       tag: "2.16.0"
       pullPolicy: IfNotPresent
 
-    # Database config (chart sẽ dùng để generate env vars)
-    db:
-      type: postgresdb
-
     # Main node
     main:
       count: 1
