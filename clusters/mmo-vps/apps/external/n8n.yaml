@@ -29,6 +29,48 @@ spec:
     namespace: shared
   values:
     image:
+      repository: n8nio/n8n
       tag: "2.16.0"
-  ingress:
-    enabled: true
+      pullPolicy: IfNotPresent
+
+    # Database
+    db:
+      type: postgresdb
+
+    externalPostgresql:
+      host: postgresql.shared.svc.cluster.local
+      port: 5432
+      database: n8n
+      username: n8n
+      existingSecret: n8n-env
+
+    existingEncryptionKeySecret: n8n-env
+
+    # Main node
+    main:
+      count: 1
+      resources:
+        requests:
+          cpu: 50m
+          memory: 100Mi
+        limits:
+          cpu: 150m
+          memory: 200Mi
+      extraSecretNamesForEnvFrom:
+      - n8n-env
+      persistence:
+        enabled: true
+        size: 1Gi
+        storageClass: local-path
+
+    # Ingress
+    ingress:
+      enabled: true
+      className: traefik
+      hosts:
+      - host: n8n.ngocquach.com
+        paths:
+        - path: /
+          pathType: Prefix
+
+    timezone: "Asia/Ho_Chi_Minh"
