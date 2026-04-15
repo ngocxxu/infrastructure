@@ -74,21 +74,21 @@ main:
       cpu: 150m
       memory: 200Mi
 
-  livenessProbe:
-    httpGet:
-      path: /healthz
-      port: http
-    initialDelaySeconds: 60
-    periodSeconds: 15
-    failureThreshold: 5
+  # livenessProbe:
+  #   httpGet:
+  #     path: /healthz
+  #     port: http
+  #   initialDelaySeconds: 60
+  #   periodSeconds: 15
+  #   failureThreshold: 5
 
-  readinessProbe:
-    httpGet:
-      path: /healthz/readiness
-      port: http
-    initialDelaySeconds: 45
-    periodSeconds: 10
-    failureThreshold: 5
+  # readinessProbe:
+  #   httpGet:
+  #     path: /healthz/readiness
+  #     port: http
+  #   initialDelaySeconds: 45
+  #   periodSeconds: 10
+  #   failureThreshold: 5
 
   # Persistence - store n8n data (workflows, credentials, etc.)
   persistence:
