@@ -28,37 +28,57 @@ spec:
   - name: postgresql
     namespace: shared
   values:
-    replicaCount: 1
-
     image:
       repository: n8nio/n8n
       tag: "1.95.0"
       pullPolicy: IfNotPresent
 
-    secret:
-      database:
-        existingSecret: n8n-env
-        existingSecretKey: DB_POSTGRESDB_PASSWORD
-      encryption:
-        existingSecret: n8n-env
-        existingSecretKey: N8N_ENCRYPTION_KEY
+    # Database configuration
+    db:
+      type: postgresdb
 
-    config:
-      database:
-        type: postgresdb
-        postgresdb:
-          host: postgresql.shared.svc.cluster.local
-          port: 5432
-          database: n8n
-          user: n8n
+    externalPostgresql:
+      host: postgresql.shared.svc.cluster.local
+      port: 5432
+      database: n8n
+      username: n8n
+      existingSecret: n8n-env
 
-      generic:
-        timezone: Asia/Ho_Chi_Minh
+    # Encryption key
+    existingEncryptionKeySecret: n8n-env # Secret containing N8N_ENCRYPTION_KEY
 
-      executions:
-        pruneData: true
-        pruneDataMaxAge: 168
+    # Main node configuration
+    main:
+      count: 1
+      resources:
+        requests:
+          memory: 100Mi
+          cpu: 50m
+        limits:
+          memory: 200Mi
+          cpu: 150m
+      livenessProbe:
+        httpGet:
+          path: /healthz
+          port: http
+        initialDelaySeconds: 60
+        periodSeconds: 15
+        failureThreshold: 5
+      readinessProbe:
+        httpGet:
+          path: /healthz/readiness
+          port: http
+        initialDelaySeconds: 45
+        periodSeconds: 10
+        failureThreshold: 5
+      extraEnvVars:
+        GENERIC_TIMEZONE: "Asia/Ho_Chi_Minh"
+        TZ: "Asia/Ho_Chi_Minh"
+        N8N_PROTOCOL: "https"
+        N8N_HOST: "n8n.ngocquach.com"
+        WEBHOOK_URL: "https://n8n.ngocquach.com"
 
+    # Ingress
     ingress:
       enabled: true
       className: traefik
@@ -68,31 +88,5 @@ spec:
         - path: /
           pathType: Prefix
 
-    persistence:
-      enabled: true
-      storageClass: local-path
-      size: 1Gi
-
-    resources:
-      requests:
-        memory: 100Mi
-        cpu: 50m
-      limits:
-        memory: 200Mi
-        cpu: 150m
-
-    livenessProbe:
-      httpGet:
-        path: /healthz
-        port: http
-      initialDelaySeconds: 60
-      periodSeconds: 15
-      failureThreshold: 5
-
-    readinessProbe:
-      httpGet:
-        path: /healthz
-        port: http
-      initialDelaySeconds: 45
-      periodSeconds: 10
-      failureThreshold: 5
+    # Timezone
+    timezone: "Asia/Ho_Chi_Minh"
