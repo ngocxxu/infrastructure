@@ -29,20 +29,18 @@ spec:
     namespace: shared
   values:
     image:
-      repository: n8nio/n8n
       tag: "2.16.0"
-      pullPolicy: IfNotPresent
 
     # Main node
     main:
-      count: 1
-      resources:
-        requests:
-          cpu: 50m
-          memory: 100Mi
-        limits:
-          cpu: 150m
-          memory: 200Mi
+      # count: 1
+      # resources:
+      #   requests:
+      #     cpu: 50m
+      #     memory: 100Mi
+      #   limits:
+      #     cpu: 150m
+      #     memory: 200Mi
 
       # # Load ALL env vars from Doppler (bao gồm passwords, encryption key)
       # extraSecretNamesForEnvFrom:
@@ -67,10 +65,10 @@ spec:
       #   GENERIC_TIMEZONE: "Asia/Ho_Chi_Minh"
       #   TZ: "Asia/Ho_Chi_Minh"
 
-      # persistence:
-      #   enabled: true
-      #   size: 1Gi
-      #   storageClass: local-path
+      persistence:
+        enabled: true
+        size: 1Gi
+        storageClass: local-path
 
     # Ingress
     ingress:
@@ -81,5 +79,3 @@ spec:
         paths:
         - path: /
           pathType: Prefix
-
-    # timezone: "Asia/Ho_Chi_Minh"
