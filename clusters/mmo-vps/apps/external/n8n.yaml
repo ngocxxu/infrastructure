@@ -44,28 +44,28 @@ spec:
           cpu: 150m
           memory: 200Mi
 
-      # Load ALL env vars from Doppler (bao gồm passwords, encryption key)
-      extraSecretNamesForEnvFrom:
-      - n8n-env
-      # Override/add specific env vars
-      extraEnvVars:
-        # Database connection
-        DB_TYPE: "postgresdb"
-        DB_POSTGRESDB_HOST: "postgresql.shared.svc.cluster.local"
-        DB_POSTGRESDB_PORT: "5432"
-        DB_POSTGRESDB_DATABASE: "n8n"
-        # DB_POSTGRESDB_USER: "n8n"
-        # DB_POSTGRESDB_PASSWORD sẽ load từ n8n-env secret
+      # # Load ALL env vars from Doppler (bao gồm passwords, encryption key)
+      # extraSecretNamesForEnvFrom:
+      # - n8n-env
+      # # Override/add specific env vars
+      # extraEnvVars:
+      #   # Database connection
+      #   DB_TYPE: "postgresdb"
+      #   DB_POSTGRESDB_HOST: "postgresql.shared.svc.cluster.local"
+      #   DB_POSTGRESDB_PORT: "5432"
+      #   DB_POSTGRESDB_DATABASE: "n8n"
+      #   # DB_POSTGRESDB_USER: "n8n"
+      #   # DB_POSTGRESDB_PASSWORD sẽ load từ n8n-env secret
 
-        # n8n config
-        N8N_HOST: "n8n.ngocquach.com"
-        N8N_PROTOCOL: "https"
-        N8N_PORT: "5678"
-        WEBHOOK_URL: "https://n8n.ngocquach.com"
+      #   # n8n config
+      #   N8N_HOST: "n8n.ngocquach.com"
+      #   N8N_PROTOCOL: "https"
+      #   N8N_PORT: "5678"
+      #   WEBHOOK_URL: "https://n8n.ngocquach.com"
 
-        # Timezone
-        GENERIC_TIMEZONE: "Asia/Ho_Chi_Minh"
-        TZ: "Asia/Ho_Chi_Minh"
+      #   # Timezone
+      #   GENERIC_TIMEZONE: "Asia/Ho_Chi_Minh"
+      #   TZ: "Asia/Ho_Chi_Minh"
 
       persistence:
         enabled: true
