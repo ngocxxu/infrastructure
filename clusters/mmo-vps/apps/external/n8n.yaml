@@ -30,9 +30,8 @@ spec:
   values:
     image:
       tag: "2.16.0"
-
-    # Main node
-    main:
+      # Main node
+      # main:
       # count: 1
       # resources:
       #   requests:
@@ -65,17 +64,17 @@ spec:
       #   GENERIC_TIMEZONE: "Asia/Ho_Chi_Minh"
       #   TZ: "Asia/Ho_Chi_Minh"
 
-      persistence:
-        enabled: true
-        size: 1Gi
-        storageClass: local-path
+      # persistence:
+      #   enabled: true
+      #   size: 1Gi
+      #   storageClass: local-path
 
-    # Ingress
-    ingress:
-      enabled: true
-      className: traefik
-      hosts:
-      - host: n8n.ngocquach.com
-        paths:
-        - path: /
-          pathType: Prefix
+      # Ingress
+      # ingress:
+      #   enabled: true
+      #   className: traefik
+      #   hosts:
+      #   - host: n8n.ngocquach.com
+      #     paths:
+      #     - path: /
+      #       pathType: Prefix
