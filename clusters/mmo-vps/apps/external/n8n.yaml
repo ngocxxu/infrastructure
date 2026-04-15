@@ -42,9 +42,10 @@ spec:
       port: 5432
       database: n8n
       username: n8n
-      existingSecret: n8n-env
+      password: ""
+      existingSecret: ""
 
-    existingEncryptionKeySecret: n8n-env
+    # existingEncryptionKeySecret: n8n-env
 
     # Main node
     main:
