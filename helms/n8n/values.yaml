@@ -24,10 +24,10 @@ config:
       port: 5432
       database: n8n
       user: n8n
-  
+
   generic:
     timezone: Asia/Ho_Chi_Minh
-  
+
   executions:
     pruneData: true
     pruneDataMaxAge: 168
@@ -36,10 +36,10 @@ ingress:
   enabled: true
   className: traefik
   hosts:
-    - host: n8n.ngocquach.com
-      paths:
-        - path: /
-          pathType: Prefix
+  - host: n8n.ngocquach.com
+    paths:
+    - path: /
+      pathType: Prefix
 
 persistence:
   enabled: true

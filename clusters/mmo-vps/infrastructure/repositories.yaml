@@ -8,7 +8,6 @@ spec:
   interval: 1h
   type: oci
   url: oci://registry-1.docker.io/bitnamicharts
-
 ---
 # Helm Repository for Doppler Operator
 apiVersion: source.toolkit.fluxcd.io/v1
@@ -19,7 +18,6 @@ metadata:
 spec:
   interval: 1h
   url: https://helm.doppler.com
-
 ---
 # Helm Repository for Grafana
 apiVersion: source.toolkit.fluxcd.io/v1
@@ -30,7 +28,6 @@ metadata:
 spec:
   interval: 1h
   url: https://grafana.github.io/helm-charts
-
 ---
 # Helm Repository for n8n community charts
 apiVersion: source.toolkit.fluxcd.io/v1

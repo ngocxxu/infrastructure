@@ -29,12 +29,12 @@ spec:
     namespace: shared
   values:
     replicaCount: 1
-    
+
     image:
       repository: n8nio/n8n
       tag: "1.95.0"
       pullPolicy: IfNotPresent
-    
+
     secret:
       database:
         existingSecret: n8n-env
@@ -42,7 +42,7 @@ spec:
       encryption:
         existingSecret: n8n-env
         existingSecretKey: N8N_ENCRYPTION_KEY
-    
+
     config:
       database:
         type: postgresdb
@@ -51,28 +51,28 @@ spec:
           port: 5432
           database: n8n
           user: n8n
-      
+
       generic:
         timezone: Asia/Ho_Chi_Minh
-      
+
       executions:
         pruneData: true
         pruneDataMaxAge: 168
-    
+
     ingress:
       enabled: true
       className: traefik
       hosts:
-        - host: n8n.ngocquach.com
-          paths:
-            - path: /
-              pathType: Prefix
-    
+      - host: n8n.ngocquach.com
+        paths:
+        - path: /
+          pathType: Prefix
+
     persistence:
       enabled: true
       storageClass: local-path
       size: 1Gi
-    
+
     resources:
       requests:
         memory: 100Mi
@@ -80,7 +80,7 @@ spec:
       limits:
         memory: 200Mi
         cpu: 150m
-    
+
     livenessProbe:
       httpGet:
         path: /healthz
@@ -88,7 +88,7 @@ spec:
       initialDelaySeconds: 60
       periodSeconds: 15
       failureThreshold: 5
-    
+
     readinessProbe:
       httpGet:
         path: /healthz
