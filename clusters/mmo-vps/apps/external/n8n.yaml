@@ -31,15 +31,15 @@ spec:
     image:
       tag: "2.16.0"
       # Main node
-      # main:
-      # count: 1
-      # resources:
-      #   requests:
-      #     cpu: 50m
-      #     memory: 100Mi
-      #   limits:
-      #     cpu: 150m
-      #     memory: 200Mi
+      main:
+      count: 1
+      resources:
+        requests:
+          cpu: 50m
+          memory: 100Mi
+        limits:
+          cpu: 100m
+          memory: 250Mi
 
       # # Load ALL env vars from Doppler (bao gồm passwords, encryption key)
       # extraSecretNamesForEnvFrom:
@@ -64,17 +64,17 @@ spec:
       #   GENERIC_TIMEZONE: "Asia/Ho_Chi_Minh"
       #   TZ: "Asia/Ho_Chi_Minh"
 
-      # persistence:
-      #   enabled: true
-      #   size: 1Gi
-      #   storageClass: local-path
+      persistence:
+        enabled: true
+        size: 1Gi
+        storageClass: local-path
 
       # Ingress
-      # ingress:
-      #   enabled: true
-      #   className: traefik
-      #   hosts:
-      #   - host: n8n.ngocquach.com
-      #     paths:
-      #     - path: /
-      #       pathType: Prefix
+      ingress:
+        enabled: true
+        className: traefik
+        hosts:
+        - host: n8n.ngocquach.com
+          paths:
+          - path: /
+            pathType: Prefix
