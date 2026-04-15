@@ -30,16 +30,17 @@ spec:
   values:
     image:
       tag: "2.16.0"
-      # Main node
-      main:
+
+    # Main node
+    main:
       count: 1
       resources:
         requests:
-          cpu: 50m
-          memory: 100Mi
+          cpu: 250m
+          memory: 512Mi
         limits:
-          cpu: 100m
-          memory: 250Mi
+          cpu: 1000m
+          memory: 1Gi
 
       # Load ALL env vars from Doppler (bao gồm passwords, encryption key)
       extraSecretNamesForEnvFrom:
@@ -69,12 +70,12 @@ spec:
         size: 1Gi
         storageClass: local-path
 
-      # Ingress
-      ingress:
-        enabled: true
-        className: traefik
-        hosts:
-        - host: n8n.ngocquach.com
-          paths:
-          - path: /
-            pathType: Prefix
+    # Ingress
+    ingress:
+      enabled: true
+      className: traefik
+      hosts:
+      - host: n8n.ngocquach.com
+        paths:
+        - path: /
+          pathType: Prefix
