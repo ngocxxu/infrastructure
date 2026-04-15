@@ -1,71 +1,242 @@
-# Override values for n8n community chart
-# Chart: https://artifacthub.io/packages/helm/community-charts/n8n
-
-replicaCount: 1
+# ============================================================
+# n8n Helm Values - K3s Production (Single Node)
+# PostgreSQL + Doppler Secrets + Traefik Ingress
+# ============================================================
 
 image:
   repository: n8nio/n8n
-  tag: "1.95.0"
   pullPolicy: IfNotPresent
+  tag: "" # Để trống = dùng appVersion của chart
 
-secret:
-  database:
-    existingSecret: n8n-env
-    existingSecretKey: DB_POSTGRESDB_PASSWORD
-  encryption:
-    existingSecret: n8n-env
-    existingSecretKey: N8N_ENCRYPTION_KEY
+# ------------------------------------------------------------
+# Timezone & Locale
+# ------------------------------------------------------------
+timezone: "Asia/Ho_Chi_Minh"
+defaultLocale: "en"
+gracefulShutdownTimeout: 30
 
-config:
-  database:
-    type: postgresdb
-    postgresdb:
-      host: postgresql.shared.svc.cluster.local
-      port: 5432
-      database: n8n
-      user: n8n
+# ------------------------------------------------------------
+# Encryption Key
+# Managed by Doppler secret (n8n-env)
+# Secret must contain key: N8N_ENCRYPTION_KEY
+# ------------------------------------------------------------
+encryptionKey: ""
+existingEncryptionKeySecret: "n8n-env"
 
-  generic:
-    timezone: Asia/Ho_Chi_Minh
+# ------------------------------------------------------------
+# Database - External PostgreSQL (shared namespace)
+# ------------------------------------------------------------
+db:
+  type: postgresdb
+  tablePrefix: ""
+  logging:
+    enabled: false
+    options: error
+    maxQueryExecutionTime: 0
+  postgresdb:
+    poolSize: 5
+    connectionTimeout: 20000
+    idleConnectionTimeout: 30000
+    schema: public
+    ssl:
+      enabled: false
+      rejectUnauthorized: true
 
-  executions:
-    pruneData: true
-    pruneDataMaxAge: 168
+# External PostgreSQL configuration
+externalPostgresql:
+  host: "postgresql.shared.svc.cluster.local"
+  port: 5432
+  username: "n8n"
+  password: "" # Loaded from secret
+  database: "n8n"
+  existingSecret: "n8n-env" # Doppler-managed secret, must contain key: postgres-password
 
+# Disable internal PostgreSQL subchart
+postgresql:
+  enabled: false
+
+# ------------------------------------------------------------
+# Main node - Single node deployment
+# ------------------------------------------------------------
+main:
+  count: 1
+
+  editorBaseUrl: "https://n8n.ngocquach.com"
+
+  pdb:
+    enabled: false # Single node doesn't need PDB
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 100Mi
+    limits:
+      cpu: 150m
+      memory: 200Mi
+
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: http
+    initialDelaySeconds: 60
+    periodSeconds: 15
+    failureThreshold: 5
+
+  readinessProbe:
+    httpGet:
+      path: /healthz/readiness
+      port: http
+    initialDelaySeconds: 45
+    periodSeconds: 10
+    failureThreshold: 5
+
+  # Persistence - store n8n data (workflows, credentials, etc.)
+  persistence:
+    enabled: true
+    mountPath: "/home/node/.n8n"
+    storageClass: "local-path" # k3s default StorageClass
+    accessMode: ReadWriteOnce
+    size: 1Gi
+    annotations:
+      helm.sh/resource-policy: keep
+
+  # Load all environment variables from Doppler secret
+  extraSecretNamesForEnvFrom:
+  - n8n-env
+
+  extraEnvVars:
+    N8N_PROTOCOL: "https"
+    N8N_HOST: "n8n.ngocquach.com"
+    WEBHOOK_URL: "https://n8n.ngocquach.com"
+    NODE_ENV: "production"
+    GENERIC_TIMEZONE: "Asia/Ho_Chi_Minh"
+    TZ: "Asia/Ho_Chi_Minh"
+    N8N_DIAGNOSTICS_ENABLED: "false"
+    N8N_PERSONALIZATION_ENABLED: "false"
+    EXECUTIONS_DATA_PRUNE: "true"
+    EXECUTIONS_DATA_MAX_AGE: "168" # 7 days
+
+# ------------------------------------------------------------
+# Worker - disabled (single node mode)
+# ------------------------------------------------------------
+worker:
+  mode: regular
+
+# ------------------------------------------------------------
+# Webhook - disabled (single node mode)
+# ------------------------------------------------------------
+webhook:
+  mode: regular
+
+# ------------------------------------------------------------
+# Redis - disabled (not needed for single node)
+# ------------------------------------------------------------
+redis:
+  enabled: false
+
+# ------------------------------------------------------------
+# Task Runners
+# ------------------------------------------------------------
+taskRunners:
+  mode: internal
+  taskTimeout: 60
+  maxConcurrency: 5
+
+# ------------------------------------------------------------
+# Ingress - Traefik (k3s default)
+# ------------------------------------------------------------
 ingress:
   enabled: true
-  className: traefik
+  className: "traefik"
+  annotations: {}
   hosts:
   - host: n8n.ngocquach.com
     paths:
     - path: /
       pathType: Prefix
+  tls: []
+  # If using cert-manager for automatic TLS:
+  # tls:
+  # - secretName: n8n-tls
+  #   hosts:
+  #   - n8n.ngocquach.com
 
-persistence:
+  # ------------------------------------------------------------
+  # Service
+  # ------------------------------------------------------------
+service:
   enabled: true
-  storageClass: local-path
-  size: 1Gi
+  type: ClusterIP
+  port: 5678
+  name: http
 
-resources:
-  requests:
-    memory: 100Mi
-    cpu: 50m
-  limits:
-    memory: 200Mi
-    cpu: 150m
+# ------------------------------------------------------------
+# Security Context
+# ------------------------------------------------------------
+podSecurityContext:
+  fsGroup: 1000
+  fsGroupChangePolicy: "OnRootMismatch"
 
-livenessProbe:
-  httpGet:
-    path: /healthz
-    port: http
-  initialDelaySeconds: 60
-  periodSeconds: 15
-  failureThreshold: 5
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
 
-readinessProbe:
-  httpGet:
-    path: /healthz
-    port: http
-  initialDelaySeconds: 45
-  periodSeconds: 10
-  failureThreshold: 5
+# ------------------------------------------------------------
+# Deployment Strategy
+# ------------------------------------------------------------
+strategy:
+  type: "RollingUpdate"
+  rollingUpdate:
+    maxSurge: "25%"
+    maxUnavailable: "0" # Zero-downtime for single node
+
+# ------------------------------------------------------------
+# Workflow History
+# ------------------------------------------------------------
+workflowHistory:
+  enabled: true
+  pruneTime: 168 # Keep 7 days of history
+
+# ------------------------------------------------------------
+# Disable telemetry & notifications (production)
+# ------------------------------------------------------------
+diagnostics:
+  enabled: false
+
+versionNotifications:
+  enabled: false
+
+# ------------------------------------------------------------
+# API
+# ------------------------------------------------------------
+api:
+  enabled: true
+  path: api
+  swagger:
+    enabled: false # Disable Swagger in production
+
+# ------------------------------------------------------------
+# License (Community = false)
+# ------------------------------------------------------------
+license:
+  enabled: false
+
+# ------------------------------------------------------------
+# Log
+# ------------------------------------------------------------
+log:
+  level: warn # Production: warn or error
+  output:
+  - console
+
+# ------------------------------------------------------------
+# Node selector & tolerations (k3s)
+# ------------------------------------------------------------
+nodeSelector: {}
+tolerations: []
