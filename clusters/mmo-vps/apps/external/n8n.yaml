@@ -67,10 +67,10 @@ spec:
       #   GENERIC_TIMEZONE: "Asia/Ho_Chi_Minh"
       #   TZ: "Asia/Ho_Chi_Minh"
 
-      persistence:
-        enabled: true
-        size: 1Gi
-        storageClass: local-path
+      # persistence:
+      #   enabled: true
+      #   size: 1Gi
+      #   storageClass: local-path
 
     # Ingress
     ingress:
@@ -82,4 +82,4 @@ spec:
         - path: /
           pathType: Prefix
 
-    timezone: "Asia/Ho_Chi_Minh"
+    # timezone: "Asia/Ho_Chi_Minh"
