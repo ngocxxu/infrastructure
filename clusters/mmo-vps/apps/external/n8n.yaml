@@ -6,12 +6,73 @@ metadata:
 spec:
   interval: 5m
   releaseName: n8n
+  chart:
+    spec:
+      chart: n8n
+      version: "0.24.0"
+      sourceRef:
+        kind: HelmRepository
+        name: community-charts
+        namespace: flux-system
+  targetNamespace: external
+  install:
+    createNamespace: true
+    timeout: 15m
+    remediation:
+      retries: 2
+  upgrade:
+    timeout: 15m
+    remediation:
+      retries: 2
+  dependsOn:
+  - name: postgresql
+    namespace: shared
   values:
+    replicaCount: 1
+    
+    image:
+      repository: n8nio/n8n
+      tag: "1.95.0"
+      pullPolicy: IfNotPresent
+    
+    secret:
+      database:
+        existingSecret: n8n-env
+        existingSecretKey: DB_POSTGRESDB_PASSWORD
+      encryption:
+        existingSecret: n8n-env
+        existingSecretKey: N8N_ENCRYPTION_KEY
+    
+    config:
+      database:
+        type: postgresdb
+        postgresdb:
+          host: postgresql.shared.svc.cluster.local
+          port: 5432
+          database: n8n
+          user: n8n
+      
+      generic:
+        timezone: Asia/Ho_Chi_Minh
+      
+      executions:
+        pruneData: true
+        pruneDataMaxAge: 168
+    
     ingress:
       enabled: true
-    image:
-      ref: docker.io/n8nio/n8n:latest # {"$imagepolicy": "flux-system:n8n-latest"}
-    envFromSecret: n8n-env
+      className: traefik
+      hosts:
+        - host: n8n.ngocquach.com
+          paths:
+            - path: /
+              pathType: Prefix
+    
+    persistence:
+      enabled: true
+      storageClass: local-path
+      size: 1Gi
+    
     resources:
       requests:
         memory: 100Mi
@@ -19,27 +80,19 @@ spec:
       limits:
         memory: 200Mi
         cpu: 150m
-  dependsOn:
-  - name: postgresql
-    namespace: shared
-  chart:
-    spec:
-      chart: ./helms/n8n
-      sourceRef:
-        kind: GitRepository
-        name: flux-system
-        namespace: flux-system
-      reconcileStrategy: Revision
-  targetNamespace: external
-  install:
-    createNamespace: true
-    timeout: 15m
-    remediation:
-      retries: 2
-      remediateLastFailure: true
-  upgrade:
-    timeout: 15m
-    remediation:
-      retries: 2
-      remediateLastFailure: true
-      strategy: uninstall
+    
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: http
+      initialDelaySeconds: 60
+      periodSeconds: 15
+      failureThreshold: 5
+    
+    readinessProbe:
+      httpGet:
+        path: /healthz
+        port: http
+      initialDelaySeconds: 45
+      periodSeconds: 10
+      failureThreshold: 5

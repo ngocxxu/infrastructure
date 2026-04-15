@@ -1,105 +1,71 @@
+# Override values for n8n community chart
+# Chart: https://artifacthub.io/packages/helm/community-charts/n8n
+
 replicaCount: 1
 
 image:
   repository: n8nio/n8n
+  tag: "1.95.0"
   pullPolicy: IfNotPresent
-  tag: ""
-  ref: ""
 
-imagePullSecrets: []
-nameOverride: ""
-fullnameOverride: ""
+secret:
+  database:
+    existingSecret: n8n-env
+    existingSecretKey: DB_POSTGRESDB_PASSWORD
+  encryption:
+    existingSecret: n8n-env
+    existingSecretKey: N8N_ENCRYPTION_KEY
 
-serviceAccount:
-  create: true
-  automount: true
-  annotations: {}
-  name: ""
-
-podAnnotations: {}
-podLabels: {}
-
-podSecurityContext:
-  fsGroup: 1000
-  fsGroupChangePolicy: OnRootMismatch
-
-securityContext:
-  allowPrivilegeEscalation: false
-  runAsNonRoot: true
-  runAsUser: 1000
-  runAsGroup: 1000
-
-service:
-  type: ClusterIP
-  port: 5678
-  nodePort: ""
-  annotations: {}
+config:
+  database:
+    type: postgresdb
+    postgresdb:
+      host: postgresql.shared.svc.cluster.local
+      port: 5432
+      database: n8n
+      user: n8n
+  
+  generic:
+    timezone: Asia/Ho_Chi_Minh
+  
+  executions:
+    pruneData: true
+    pruneDataMaxAge: 168
 
 ingress:
-  enabled: false
-  className: "traefik"
-  annotations: {}
+  enabled: true
+  className: traefik
   hosts:
-  - host: n8n.ngocquach.com
-    paths:
-    - path: /
-      pathType: Prefix
-  tls: []
-
-resources: {}
-
-autoscaling:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 3
-  targetCPUUtilizationPercentage: 80
+    - host: n8n.ngocquach.com
+      paths:
+        - path: /
+          pathType: Prefix
 
 persistence:
   enabled: true
-  existingClaim: ""
-  storageClass: "local-path"
-  accessModes:
-  - ReadWriteOnce
+  storageClass: local-path
   size: 1Gi
-  annotations:
-    helm.sh/resource-policy: keep
 
-env:
-  GENERIC_TIMEZONE: "Asia/Ho_Chi_Minh"
-  TZ: "Asia/Ho_Chi_Minh"
-  N8N_PORT: "5678"
-  N8N_PROTOCOL: "https"
-  N8N_HOST: "n8n.ngocquach.com"
-  WEBHOOK_URL: "https://n8n.ngocquach.com"
-  N8N_DIAGNOSTICS_ENABLED: "false"
-  N8N_PERSONALIZATION_ENABLED: "false"
-  DB_TYPE: "postgresdb"
-  EXECUTIONS_DATA_PRUNE: "true"
-  EXECUTIONS_DATA_MAX_AGE: "168"
-
-extraEnv: []
-
-envFromSecret: ""
+resources:
+  requests:
+    memory: 100Mi
+    cpu: 50m
+  limits:
+    memory: 200Mi
+    cpu: 150m
 
 livenessProbe:
   httpGet:
     path: /healthz
     port: http
-  initialDelaySeconds: 30
+  initialDelaySeconds: 60
   periodSeconds: 15
-  failureThreshold: 3
+  failureThreshold: 5
 
 readinessProbe:
   httpGet:
     path: /healthz
     port: http
-  initialDelaySeconds: 15
+  initialDelaySeconds: 45
   periodSeconds: 10
-  failureThreshold: 3
-
-nodeSelector: {}
-tolerations: []
-affinity: {}
-
-volumes: []
-volumeMounts: []
+  failureThreshold: 5
