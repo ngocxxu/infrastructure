@@ -25,7 +25,7 @@ spec:
         kind: GitRepository
         name: flux-system
         namespace: flux-system
-      reconcileStrategy: Revision
+      reconcileStrategy: ChartVersion
   targetNamespace: external
   install:
     createNamespace: true

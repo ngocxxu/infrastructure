@@ -10,8 +10,8 @@ spec:
     image:
       ref: docker.io/ngocxxu/vocab-be:1.32.1 # {"$imagepolicy": "flux-system:vocab-be-semver"}
   dependsOn:
-    - name: postgresql
-      namespace: shared
+  - name: postgresql
+    namespace: shared
   chart:
     spec:
       chart: ./helms/vocab-be
@@ -19,7 +19,7 @@ spec:
         kind: GitRepository
         name: flux-system
         namespace: flux-system
-      reconcileStrategy: Revision
+      reconcileStrategy: ChartVersion
   targetNamespace: project-vocab
   install:
     createNamespace: true
