@@ -17,11 +17,11 @@ primary:
     storageClass: "local-path"
   resources:
     limits:
-      memory: 100Mi
-      cpu: 50m
+      memory: 200Mi
+      cpu: 100m
     requests:
-      memory: 50Mi
-      cpu: 25m
+      memory: 96Mi
+      cpu: 50m
   podSecurityContext:
     fsGroup: 1001
   containerSecurityContext:

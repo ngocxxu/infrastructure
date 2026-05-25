@@ -18,11 +18,11 @@ master:
     storageClass: "local-path"
   resources:
     limits:
-      memory: 30Mi
-      cpu: 80m
+      memory: 64Mi
+      cpu: 150m
     requests:
-      memory: 10Mi
-      cpu: 40m
+      memory: 24Mi
+      cpu: 50m
   readinessProbe:
     exec:
       command:
@@ -49,11 +49,11 @@ replica:
     storageClass: "local-path"
   resources:
     limits:
-      memory: 30Mi
-      cpu: 80m
+      memory: 64Mi
+      cpu: 150m
     requests:
-      memory: 10Mi
-      cpu: 40m
+      memory: 24Mi
+      cpu: 50m
   readinessProbe:
     enabled: false
   livenessProbe:
