@@ -74,3 +74,9 @@ helm secrets upgrade --install postgresql ./helms/postgresql \
   --namespace postgresql
   --create-namespace
 ```
+
+
+# Access to VPS
+```bash
+ssh ngocxxu@ip_host
+```
