@@ -1,0 +1,22 @@
+# ============================================================
+# MANAGED BY ANSIBLE - ansible/roles/k3s/templates/config.yaml.j2
+# Manual edits will be overwritten on the next playbook run.
+# ============================================================
+# k3s reads this on startup and passes the flags through to the embedded
+# kubelet, which is why it works on an ALREADY-INSTALLED node. Putting
+# these in INSTALL_K3S_EXEC instead would only ever apply to a fresh
+# install, and this role skips the installer when the binary exists.
+#
+# NOTE: deliberately NOT setting kube-reserved-cgroup /
+# system-reserved-cgroup. Those make kubelet enforce the reservation via
+# cgroups that k3s does not create, and kubelet refuses to start if they
+# are missing. Without them the reservation still does its real job:
+# subtracting from Allocatable so the scheduler stops overcommitting.
+
+kubelet-arg:
+  - "system-reserved=cpu={{ k3s_system_reserved_cpu }},memory={{ k3s_system_reserved_memory }}"
+  - "kube-reserved=cpu={{ k3s_kube_reserved_cpu }},memory={{ k3s_kube_reserved_memory }}"
+  - "eviction-hard={{ k3s_eviction_hard }}"
+  - "eviction-soft={{ k3s_eviction_soft }}"
+  - "eviction-soft-grace-period={{ k3s_eviction_soft_grace_period }}"
+  - "eviction-max-pod-grace-period={{ k3s_eviction_max_pod_grace_period }}"

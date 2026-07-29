@@ -1,0 +1,37 @@
+---
+# ============================================================
+# Node resource reservations
+# ============================================================
+# Sized for the current single node: 3 CPU / 4.7GiB capacity.
+#
+# Why this exists: with nothing reserved, kubelet reports the FULL 4.7GiB
+# as allocatable and happily schedules against it — while k3s-server,
+# containerd, sshd and the kernel were already holding ~1.7GiB. The
+# scheduler was doing its math against memory that did not exist.
+#
+# After these values, allocatable drops to roughly:
+#   memory  4.7GiB - 256Mi - 768Mi - 250Mi(hard evict) ~= 3.4GiB
+#   cpu     3.00   - 0.2   - 0.2                        = 2.60
+# Current usage is ~1.4GiB requests / 2.9GiB limits, so everything
+# still fits with headroom. Re-check these if the node is resized.
+
+# OS-level daemons: sshd, journald, cron, the kernel itself.
+k3s_system_reserved_cpu: "200m"
+k3s_system_reserved_memory: "256Mi"
+
+# k3s-server (apiserver + scheduler + controller-manager + datastore)
+# and containerd. k3s-server alone idles around 500-700Mi.
+k3s_kube_reserved_cpu: "200m"
+k3s_kube_reserved_memory: "768Mi"
+
+# Hard eviction: kubelet kills pods immediately, no grace period.
+# This is the last line of defence before the kernel OOM killer, which
+# picks victims by its own heuristics rather than by pod priority.
+k3s_eviction_hard: "memory.available<250Mi,nodefs.available<10%,imagefs.available<10%"
+
+# Soft eviction: kubelet evicts politely (SIGTERM, respects
+# terminationGracePeriod) once memory has been low for the grace period.
+# This is what you WANT to trigger first — graceful, not a SIGKILL.
+k3s_eviction_soft: "memory.available<500Mi,nodefs.available<15%"
+k3s_eviction_soft_grace_period: "memory.available=2m,nodefs.available=2m"
+k3s_eviction_max_pod_grace_period: "60"

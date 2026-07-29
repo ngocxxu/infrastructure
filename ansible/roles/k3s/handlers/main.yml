@@ -1,0 +1,17 @@
+---
+# Only fires when config.yaml actually changed, so re-running the
+# playbook does not restart k3s for nothing.
+- name: Restart k3s
+  systemd:
+    name: k3s
+    state: restarted
+    daemon_reload: true
+  become: true
+  listen: restart k3s
+
+- name: Wait for K3s API after restart
+  wait_for:
+    port: 6443
+    delay: 5
+    timeout: 300
+  listen: restart k3s

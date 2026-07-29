@@ -4,6 +4,25 @@
     path: /usr/local/bin/k3s
   register: k3s_binary
 
+# 0. Node resource reservations - MUST be written before the installer runs,
+#    so a fresh node comes up with correct Allocatable from the very first
+#    boot instead of needing a second restart. On an existing node the
+#    handler restarts k3s to pick up changes.
+- name: Ensure k3s config directory exists
+  file:
+    path: /etc/rancher/k3s
+    state: directory
+    mode: '0755'
+  become: true
+
+- name: Configure kubelet resource reservations and eviction thresholds
+  template:
+    src: config.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    mode: '0644'
+  become: true
+  notify: restart k3s
+
 # 1. Install K3s by main script
 - name: Install K3s Server
   shell: |
