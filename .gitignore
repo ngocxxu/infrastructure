@@ -31,6 +31,13 @@ kubeconfig
 *.kubeconfig
 kube-config
 .kube/
+# Written by ansible/roles/k3s when a local kubeconfig already exists.
+# Contains client-certificate-data / client-key-data — cluster-admin
+# credentials in plain base64. Never commit.
+*.generated
+config-vps*
+# Ansible template backup (backup: true) - same credentials, different name
+*.@*~
 
 # Environment files
 .env
