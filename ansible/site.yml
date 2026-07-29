@@ -2,8 +2,16 @@
 - name: Setup K3s VPS
   hosts: k3s_master  # Group name in hosts.ini
   become: true       # Automatically run with sudo
+  # Tags let you run one layer at a time, e.g.
+  #   ansible-playbook site.yml --tags k3s --check --diff
+  # Without them `--tags <role-name>` silently matches nothing and the
+  # playbook does nothing but gather facts.
   roles:
-    - common
-    - security
-    - k3s
-    - gitops
+    - role: common
+      tags: [common]
+    - role: security
+      tags: [security]
+    - role: k3s
+      tags: [k3s]
+    - role: gitops
+      tags: [gitops]

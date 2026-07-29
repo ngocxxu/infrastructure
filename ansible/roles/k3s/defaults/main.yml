@@ -1,5 +1,20 @@
 ---
 # ============================================================
+# kubeconfig
+# ============================================================
+# Name given to the cluster, user and context in the generated kubeconfig.
+# k3s itself calls all three "default", which is useless the moment you
+# have more than one cluster — and it silently overwrote a manually
+# renamed context on every playbook run.
+k3s_context_name: "mmo-vps"
+
+# An existing local kubeconfig is NEVER overwritten by this role.
+# When one is found, set this to write the generated config to
+# <path>.generated instead, so it can be diffed and merged by hand.
+# Set to false if you do not want the extra file created at all.
+k3s_write_kubeconfig_merge_file: true
+
+# ============================================================
 # Node resource reservations
 # ============================================================
 # Sized for the current single node: 3 CPU / 4.7GiB capacity.

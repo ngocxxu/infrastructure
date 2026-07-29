@@ -48,11 +48,57 @@
   register: remote_kubeconfig
   become: true
 
-# 4. Fix IP and save to local machine
-- name: Save kubeconfig to local machine
-  copy:
-    content: "{{ remote_kubeconfig['content'] | b64decode | regex_replace('127.0.0.1', ansible_host) }}"
+# 4. Rewrite kubeconfig with a real context name and save to local machine
+#    k3s names the cluster/user/context all "default". Left as-is, every
+#    run of this role clobbers a locally-renamed context back to "default".
+- name: Parse remote kubeconfig
+  set_fact:
+    _k3s_kubeconfig: "{{ remote_kubeconfig['content'] | b64decode | from_yaml }}"
+
+- name: Check for an existing local kubeconfig
+  stat:
+    path: "{{ local_kubeconfig_path }}"
+  register: local_kubeconfig_stat
+  delegate_to: localhost
+  become: false
+
+# An existing kubeconfig is the operator's file, not ours. It may hold
+# extra contexts, other clusters, or hand-tuned settings that this role
+# knows nothing about, so it is NEVER overwritten. We only write it on a
+# genuinely fresh machine where the file does not exist yet.
+- name: Save kubeconfig to local machine (first-time bootstrap only)
+  template:
+    src: kubeconfig.j2
     dest: "{{ local_kubeconfig_path }}"
     mode: '0600'
   delegate_to: localhost
   become: false
+  when: not local_kubeconfig_stat.stat.exists
+
+# If the file already exists, drop the freshly generated one next to it so
+# the operator can diff and merge by hand. This matters when the node is
+# rebuilt or its certs rotate: the old kubeconfig silently stops working
+# and this gives you the new credentials without a scavenger hunt.
+- name: Write generated kubeconfig alongside for manual merge
+  template:
+    src: kubeconfig.j2
+    dest: "{{ local_kubeconfig_path }}.generated"
+    mode: '0600'
+  delegate_to: localhost
+  become: false
+  when:
+    - local_kubeconfig_stat.stat.exists
+    - k3s_write_kubeconfig_merge_file | bool
+  changed_when: false
+
+- name: Explain that the existing kubeconfig was left alone
+  debug:
+    msg: >-
+      {{ local_kubeconfig_path }} already exists and was NOT modified.
+      A generated copy was written to {{ local_kubeconfig_path }}.generated —
+      diff it and merge manually if the server address or certificates changed.
+      To merge:  KUBECONFIG={{ local_kubeconfig_path }}:{{ local_kubeconfig_path }}.generated
+      kubectl config view --flatten > merged && mv merged {{ local_kubeconfig_path }}
+  when:
+    - local_kubeconfig_stat.stat.exists
+    - k3s_write_kubeconfig_merge_file | bool
