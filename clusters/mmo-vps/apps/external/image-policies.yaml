@@ -11,17 +11,19 @@ spec:
   policy:
     alphabetical:
       order: asc
----
-apiVersion: image.toolkit.fluxcd.io/v1beta2
-kind: ImagePolicy
-metadata:
-  name: n8n-latest
-  namespace: flux-system
-spec:
-  imageRepositoryRef:
-    name: n8n
-  filterTags:
-    pattern: ^latest$
-  policy:
-    alphabetical:
-      order: asc
+# --- n8n: disabled 2026-07-29 (see apps/external/kustomization.yaml) ---
+# Left commented rather than deleted so re-enabling n8n is a one-step change.
+# ---
+# apiVersion: image.toolkit.fluxcd.io/v1beta2
+# kind: ImagePolicy
+# metadata:
+#   name: n8n-latest
+#   namespace: flux-system
+# spec:
+#   imageRepositoryRef:
+#     name: n8n
+#   filterTags:
+#     pattern: ^latest$
+#   policy:
+#     alphabetical:
+#       order: asc

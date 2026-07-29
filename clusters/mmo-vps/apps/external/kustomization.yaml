@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# ============================================================
+# NOTE: this directory previously had NO kustomization.yaml, so Flux
+# auto-discovered every .yaml file in it. An explicit list is added here
+# so individual apps can be disabled without deleting or mangling their
+# manifests — same pattern already used in flux-system/kustomization.yaml.
+#
+# IMPORTANT: apps-external has `prune: true`. Removing an entry from this
+# list makes Flux DELETE those objects from the cluster on the next
+# reconcile. The file stays in git; the workload does not stay in k8s.
+# ============================================================
+
+resources:
+  - image-policies.yaml
+  - image-update-automation.yaml
+  - omniroute.yaml
+
+  # --- n8n: disabled 2026-07-29 ---
+  # Manifests are kept intact in git for later re-enable; simply
+  # uncomment both lines below and Flux will reinstall it.
+  # Note: uninstalling ran `helm uninstall`, which dropped the 1Gi
+  # local-path PVC. Workflow data itself lives in the external
+  # PostgreSQL (shared/postgresql-0) and survives.
+  # - n8n.yaml
+  # - n8n-secret.yaml
