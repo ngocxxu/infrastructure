@@ -43,13 +43,14 @@ ingress:
         - path: /
           pathType: Prefix
 
-# resources:
-#   limits:
-#     memory: 160Mi
-#     cpu: 220m
-#   requests:
-#     memory: 80Mi
-#     cpu: 100m
+# Observed steady-state ~137Mi / 1m CPU.
+resources:
+  requests:
+    memory: 144Mi
+    cpu: 50m
+  limits:
+    memory: 224Mi
+    cpu: 300m
 
 # livenessProbe:
 #   httpGet:

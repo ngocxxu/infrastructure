@@ -34,13 +34,15 @@ spec:
     # Main node
     main:
       count: 1
+      # Observed steady-state ~310Mi / 3m CPU.
+      # Was requesting 512Mi and reserving a 1Gi/1000m limit on a 4.7Gi/3-core node.
       resources:
         requests:
-          cpu: 250m
-          memory: 512Mi
+          cpu: 50m
+          memory: 320Mi
         limits:
-          cpu: 1000m
-          memory: 1Gi
+          cpu: 500m
+          memory: 512Mi
 
       # Load ALL env vars from Doppler (bao gồm passwords, encryption key)
       extraSecretNamesForEnvFrom:

@@ -91,13 +91,14 @@ spec:
 
       alloy:
         enabled: true
+        # Observed ~320Mi, was at 91% of the old 350Mi limit (OOMKill risk).
         resources:
           requests:
             cpu: 20m
-            memory: 200Mi
+            memory: 340Mi
           limits:
-            cpu: 40m
-            memory: 350Mi
+            cpu: 100m
+            memory: 512Mi
         extraRelabelingRules: |
           rule {
             action        = "drop"
@@ -121,13 +122,14 @@ spec:
           - monitoring
           - shared
           - project-vocab
+        # Observed ~77Mi, was at 77% of the old 100Mi limit.
         resources:
           requests:
             cpu: 20m
-            memory: 60Mi
+            memory: 96Mi
           limits:
-            cpu: 40m
-            memory: 100Mi      
+            cpu: 60m
+            memory: 160Mi
 
       cluster_events:
         enabled: false 

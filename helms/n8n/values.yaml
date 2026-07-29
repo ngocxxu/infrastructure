@@ -66,13 +66,15 @@ main:
   pdb:
     enabled: false # Single node doesn't need PDB
 
+  # NOTE: this file is NOT wired into Flux. The live values live inline in
+  # clusters/mmo-vps/apps/external/n8n.yaml. Kept in sync for reference only.
   resources:
     requests:
       cpu: 50m
-      memory: 100Mi
+      memory: 320Mi
     limits:
-      cpu: 150m
-      memory: 200Mi
+      cpu: 500m
+      memory: 512Mi
 
   livenessProbe:
     httpGet:

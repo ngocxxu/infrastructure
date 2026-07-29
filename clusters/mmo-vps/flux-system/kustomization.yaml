@@ -9,3 +9,8 @@ resources:
   # - apps-project-paracord-store.yaml
   - apps-monitoring.yaml
   - apps-external.yaml
+
+# Right-size the Flux controllers' hardcoded 1Gi/1000m limits.
+# See flux-resource-limits.yaml for the rationale.
+patches:
+  - path: flux-resource-limits.yaml

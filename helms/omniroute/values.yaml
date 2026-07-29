@@ -40,7 +40,15 @@ ingress:
           pathType: Prefix
   tls: []
 
-resources: {}
+# Node/Next.js app. Observed steady-state ~426Mi.
+# Request sized to observed usage; limit gives ~40% headroom for GC spikes.
+resources:
+  requests:
+    cpu: 50m
+    memory: 448Mi
+  limits:
+    cpu: 500m
+    memory: 640Mi
 
 autoscaling:
   enabled: false
