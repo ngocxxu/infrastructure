@@ -34,15 +34,48 @@ spec:
     # Main node
     main:
       count: 1
-      # Observed steady-state ~310Mi / 3m CPU.
-      # Was requesting 512Mi and reserving a 1Gi/1000m limit on a 4.7Gi/3-core node.
+      # Steady-state is ~310Mi / 3m CPU, but n8n's BOOT is CPU-heavy
+      # (Node.js startup + DB migrations) and takes ~45s.
+      # A 50m request starved it during boot, the liveness probe timed out,
+      # and kubelet killed it in a loop. Request is sized for STARTUP, not
+      # steady-state; that is what the scheduler guarantees under contention.
       resources:
         requests:
-          cpu: 50m
-          memory: 320Mi
+          cpu: 250m
+          memory: 384Mi
         limits:
-          cpu: 500m
-          memory: 512Mi
+          cpu: 1000m
+          memory: 768Mi
+
+      # The chart's default liveness probe fires before n8n finishes booting.
+      # A startupProbe gives it up to 150s to come up, and only then does the
+      # liveness probe take over. This is the correct fix for slow-start apps —
+      # inflating initialDelaySeconds instead would also delay crash detection
+      # forever after startup.
+      startupProbe:
+        httpGet:
+          path: /healthz
+          port: http
+        initialDelaySeconds: 15
+        periodSeconds: 10
+        timeoutSeconds: 5
+        failureThreshold: 15
+
+      livenessProbe:
+        httpGet:
+          path: /healthz
+          port: http
+        periodSeconds: 20
+        timeoutSeconds: 10
+        failureThreshold: 3
+
+      readinessProbe:
+        httpGet:
+          path: /healthz
+          port: http
+        periodSeconds: 10
+        timeoutSeconds: 5
+        failureThreshold: 3
 
       # Load ALL env vars from Doppler (bao gồm passwords, encryption key)
       extraSecretNamesForEnvFrom:
