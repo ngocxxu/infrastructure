@@ -14,6 +14,13 @@ k3s_context_name: "mmo-vps"
 # Set to false if you do not want the extra file created at all.
 k3s_write_kubeconfig_merge_file: true
 
+# Filesystem mode for /etc/rancher/k3s/k3s.yaml on the node itself.
+# k3s defaults this to 0600 root:root, which blocks any non-root SSH
+# session (CI backup jobs, monitoring scripts) from reading it directly.
+# 0644 is safe: it still requires access to the node's filesystem, which
+# is the same trust boundary sudo/become already relies on here.
+k3s_kubeconfig_mode: "0644"
+
 # ============================================================
 # Node resource reservations
 # ============================================================

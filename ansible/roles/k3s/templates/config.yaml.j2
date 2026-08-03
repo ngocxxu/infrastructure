@@ -13,6 +13,13 @@
 # are missing. Without them the reservation still does its real job:
 # subtracting from Allocatable so the scheduler stops overcommitting.
 
+# k3s writes k3s.yaml root:root 0600 by default, so any non-root SSH
+# user (e.g. the CI job that runs backup-on-vps.sh) gets "permission
+# denied" reading it, even with the file world-listed in `ls`. Relaxing
+# the mode is scoped to this one file — the API server's TLS client
+# cert embedded in it is still the only thing gating real access.
+write-kubeconfig-mode: "{{ k3s_kubeconfig_mode }}"
+
 kubelet-arg:
   - "system-reserved=cpu={{ k3s_system_reserved_cpu }},memory={{ k3s_system_reserved_memory }}"
   - "kube-reserved=cpu={{ k3s_kube_reserved_cpu }},memory={{ k3s_kube_reserved_memory }}"
