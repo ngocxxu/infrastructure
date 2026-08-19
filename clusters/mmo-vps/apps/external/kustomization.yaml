@@ -17,11 +17,9 @@ resources:
   - image-update-automation.yaml
   - omniroute.yaml
 
-  # --- n8n: disabled 2026-07-29 ---
-  # Manifests are kept intact in git for later re-enable; simply
-  # uncomment both lines below and Flux will reinstall it.
-  # Note: uninstalling ran `helm uninstall`, which dropped the 1Gi
+  # --- n8n: re-enabled ---
+  # Note: previous uninstall ran `helm uninstall`, which dropped the 1Gi
   # local-path PVC. Workflow data itself lives in the external
   # PostgreSQL (shared/postgresql-0) and survives.
-  # - n8n.yaml
-  # - n8n-secret.yaml
+  - n8n.yaml
+  - n8n-secret.yaml

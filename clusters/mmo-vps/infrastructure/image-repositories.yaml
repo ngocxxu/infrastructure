@@ -24,15 +24,12 @@ metadata:
 spec:
   image: docker.io/diegosouzapw/omniroute
   interval: 5m
-# --- n8n: disabled 2026-07-29 (see apps/external/kustomization.yaml) ---
-# Nothing references this repo while n8n is off; it would just keep
-# polling Docker Hub and burning rate-limit quota.
-# ---
-# apiVersion: image.toolkit.fluxcd.io/v1beta2
-# kind: ImageRepository
-# metadata:
-#   name: n8n
-#   namespace: flux-system
-# spec:
-#   image: docker.io/n8nio/n8n
-#   interval: 5m
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: n8n
+  namespace: flux-system
+spec:
+  image: docker.io/n8nio/n8n
+  interval: 5m
