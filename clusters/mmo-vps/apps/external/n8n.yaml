@@ -89,6 +89,12 @@ spec:
         N8N_PROTOCOL: "https"
         N8N_PORT: "5678"
         WEBHOOK_URL: "https://n8n.ngocquach.com"
+        # Chart derives N8N_EDITOR_BASE_URL from ingress and emits http:// because
+        # the ingress has no tls block (TLS terminates upstream). n8n builds the
+        # OAuth callback URL from this var, so http:// here makes every Google
+        # OAuth connect fail with redirect_uri_mismatch. Listed after the chart's
+        # own entry, so this value wins.
+        N8N_EDITOR_BASE_URL: "https://n8n.ngocquach.com"
 
       #   # Timezone
       #   GENERIC_TIMEZONE: "Asia/Ho_Chi_Minh"
