@@ -34,6 +34,16 @@ spec:
     # Main node
     main:
       count: 1
+
+      # n8n builds the Google OAuth callback URL from N8N_EDITOR_BASE_URL, and
+      # the chart only honours this value. Left empty, the chart derives the URL
+      # from the ingress and hardcodes http:// unless `ingress.tls` is set (TLS
+      # terminates upstream here, so it never is). An http:// callback fails
+      # every Google OAuth connect with redirect_uri_mismatch, and Google refuses
+      # to publish an OAuth client that carries any non-HTTPS redirect URI.
+      # Setting it through extraEnvVars does NOT work: the chart emits its own
+      # N8N_EDITOR_BASE_URL entry earlier in the env list and that one wins.
+      editorBaseUrl: "https://n8n.ngocquach.com"
       # Steady-state is ~310Mi / 3m CPU, but n8n's BOOT is CPU-heavy
       # (Node.js startup + DB migrations) and takes ~45s.
       # A 50m request starved it during boot, the liveness probe timed out,
@@ -89,12 +99,6 @@ spec:
         N8N_PROTOCOL: "https"
         N8N_PORT: "5678"
         WEBHOOK_URL: "https://n8n.ngocquach.com"
-        # Chart derives N8N_EDITOR_BASE_URL from ingress and emits http:// because
-        # the ingress has no tls block (TLS terminates upstream). n8n builds the
-        # OAuth callback URL from this var, so http:// here makes every Google
-        # OAuth connect fail with redirect_uri_mismatch. Listed after the chart's
-        # own entry, so this value wins.
-        N8N_EDITOR_BASE_URL: "https://n8n.ngocquach.com"
 
       #   # Timezone
       #   GENERIC_TIMEZONE: "Asia/Ho_Chi_Minh"
