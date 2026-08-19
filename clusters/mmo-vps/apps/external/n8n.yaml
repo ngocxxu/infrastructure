@@ -47,35 +47,29 @@ spec:
           cpu: 1000m
           memory: 768Mi
 
-      # The chart's default liveness probe fires before n8n finishes booting.
-      # A startupProbe gives it up to 150s to come up, and only then does the
-      # liveness probe take over. This is the correct fix for slow-start apps —
-      # inflating initialDelaySeconds instead would also delay crash detection
-      # forever after startup.
-      startupProbe:
-        httpGet:
-          path: /healthz
-          port: http
-        initialDelaySeconds: 15
-        periodSeconds: 10
-        timeoutSeconds: 5
-        failureThreshold: 15
-
+      # ponytail: chart 1.16.36's values schema doesn't allow `main.startupProbe`
+      # (rejected on install). Fallback: widen initialDelaySeconds/failureThreshold
+      # on liveness+readiness instead, to cover the ~45s boot. Upgrade path: if a
+      # future chart version adds startupProbe support, switch back to that —
+      # it's the more correct fix since it doesn't also delay crash detection
+      # after a successful boot.
       livenessProbe:
         httpGet:
           path: /healthz
           port: http
+        initialDelaySeconds: 60
         periodSeconds: 20
         timeoutSeconds: 10
-        failureThreshold: 3
+        failureThreshold: 5
 
       readinessProbe:
         httpGet:
           path: /healthz
           port: http
+        initialDelaySeconds: 45
         periodSeconds: 10
         timeoutSeconds: 5
-        failureThreshold: 3
+        failureThreshold: 5
 
       # Load ALL env vars from Doppler (bao gồm passwords, encryption key)
       extraSecretNamesForEnvFrom:
