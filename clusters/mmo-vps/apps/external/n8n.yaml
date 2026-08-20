@@ -55,7 +55,7 @@ spec:
           memory: 384Mi
         limits:
           cpu: 1000m
-          memory: 768Mi
+          memory: 1Gi
 
       # ponytail: chart 1.16.36's values schema doesn't allow `main.startupProbe`
       # (rejected on install). Fallback: widen initialDelaySeconds/failureThreshold
