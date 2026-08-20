@@ -100,6 +100,26 @@ spec:
         N8N_PORT: "5678"
         WEBHOOK_URL: "https://n8n.ngocquach.com"
 
+        # The autopost workflow pipes video files through Drive -> YouTube -> Facebook.
+        # n8n's default binary mode holds every file in RAM as base64 (~33% larger than
+        # the file) and copies it between nodes, which OOMKilled this pod at the 768Mi
+        # limit. Raising that limit is not the fix: the k8s node already allocates 102%
+        # of its memory. Spooling binaries to the PVC keeps RAM flat regardless of clip
+        # size.
+        N8N_DEFAULT_BINARY_DATA_MODE: "filesystem"
+
+        # Clips run ~200MB each and the host disk is already 82% full, shared with every
+        # other workload. Successful runs are not persisted at all, so their spooled
+        # video is discarded the moment the execution ends and steady-state disk use
+        # stays near zero. The Google Sheet (status/posted_at) is the durable record
+        # that a clip went out, so nothing is lost by dropping these.
+        EXECUTIONS_DATA_SAVE_ON_SUCCESS: "none"
+        # Failures are still kept: without them a clip could silently never post.
+        # 24h is long enough to notice and re-queue the row.
+        EXECUTIONS_DATA_SAVE_ON_ERROR: "all"
+        EXECUTIONS_DATA_MAX_AGE: "24"
+        EXECUTIONS_DATA_PRUNE_MAX_COUNT: "50"
+
       #   # Timezone
       #   GENERIC_TIMEZONE: "Asia/Ho_Chi_Minh"
       #   TZ: "Asia/Ho_Chi_Minh"
