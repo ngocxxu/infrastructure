@@ -8,7 +8,7 @@ spec:
   releaseName: vocab-be
   values:
     image:
-      ref: docker.io/ngocxxu/vocab-be:1.62.0 # {"$imagepolicy": "flux-system:vocab-be-semver"}
+      ref: docker.io/ngocxxu/vocab-be:1.62.1 # {"$imagepolicy": "flux-system:vocab-be-semver"}
   dependsOn:
   - name: postgresql
     namespace: shared
