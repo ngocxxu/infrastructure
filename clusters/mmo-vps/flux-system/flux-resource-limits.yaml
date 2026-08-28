@@ -71,13 +71,21 @@ spec:
     spec:
       containers:
         - name: manager
+          # OOMKilled at 100Mi right after this repo added two new
+          # HelmReleases (rabbitmq, debezium-operator) in one push.
+          # 64-100Mi was sized from IDLE steady-state - actively
+          # installing/upgrading a chart makes helm-controller render
+          # the whole chart template tree in memory, which is a real,
+          # transient spike well above idle. 100Mi has no room for that.
+          # 180Mi covers install/upgrade bursts; drop back toward 100Mi
+          # later if this repo settles into "no new charts most weeks".
           resources:
             requests:
               cpu: 25m
-              memory: 64Mi
+              memory: 80Mi
             limits:
               cpu: 500m
-              memory: 100Mi
+              memory: 180Mi
 ---
 apiVersion: apps/v1
 kind: Deployment

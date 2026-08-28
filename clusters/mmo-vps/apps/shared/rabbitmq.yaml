@@ -43,6 +43,17 @@ spec:
     remediation:
       retries: 2
   values:
+    # This chart's newer image-verification check compares the image
+    # against a known-good digest list and refuses to deploy anything
+    # it doesn't recognize - which now includes bitnamilegacy, since
+    # Bitnami only recently moved the free images there. redis/postgresql
+    # in this repo are on older chart versions that predate this check,
+    # which is why they don't need this flag even though they use the
+    # same bitnamilegacy org.
+    global:
+      security:
+        allowInsecureImages: true
+
     # Same bitnamilegacy pattern already used by redis/postgresql in
     # this cluster - Bitnami moved the free images to that org.
     image:
