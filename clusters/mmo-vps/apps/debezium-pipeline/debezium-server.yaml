@@ -1,0 +1,122 @@
+# ============================================================
+# Debezium Server: Postgres -> RabbitMQ Stream (CDC)
+# Ref: https://debezium.io/blog/2025/03/18/debezium-charts/
+#      https://deepwiki.com/debezium/debezium-server/4.2.2-rabbitmq-sinks
+# ============================================================
+# Lives in its OWN Kustomization (see the Flux Kustomization resource
+# in clusters/mmo-vps/flux-system/apps-debezium-pipeline.yaml), which
+# has `dependsOn: [apps-external]`. That ordering is required: the
+# debezium.io/v1alpha1 CRD this resource uses is installed by the
+# debezium-operator HelmRelease that lives IN apps-external. Putting
+# both in the same Kustomization deadlocks Flux's dry-run validation -
+# see the long comment in apps/external/debezium.yaml for what that
+# looked like in practice.
+#
+# MEMORY WARNING - read before applying:
+# Limit is set to 356Mi PER EXPLICIT REQUEST, far below the official
+# 1Gi/2Gi guidance for the smallest realistic Debezium Server
+# deployment. JVM footprint is dominated by fixed overhead (heap +
+# metaspace + thread stacks + direct buffers + GC structures), which
+# does NOT shrink with low traffic - it shrinks only with aggressive
+# heap tuning, and even then has a floor.
+#
+# Rough budget at these JVM flags:
+#   -Xmx200m                         heap
+#   -XX:MaxMetaspaceSize=64m         class metadata (Debezium loads a lot)
+#   -XX:MaxDirectMemorySize=32m      network buffers
+#   thread stacks (~20-50 threads)   ~30-40Mi
+#   JVM native overhead (code cache) ~30-40Mi
+#   ------------------------------------------
+#   ~356-376Mi realistic total  -  right at or just over the 356Mi limit
+#
+# No real margin - the initial snapshot (reads the whole table once at
+# startup) is the riskiest moment, since it needs buffer beyond
+# steady-state. If it CrashLoopBackOffs:
+#   kubectl logs -n external -l app=vocab-postgres-cdc --previous
+#   kubectl describe pod -n external -l app=vocab-postgres-cdc | grep -A5 "Last State"
+# "OOMKilled" + exit code 137 confirms this. Fallback: raise to 448-512Mi
+# first before jumping straight back to 1Gi.
+#
+# CRD SCHEMA WARNING: field names below are built from documented
+# structure, not a live-verified example. Before this reconciles for
+# real:
+#   kubectl explain debeziumserver.spec --recursive
+#   kubectl apply --dry-run=server -f debezium-server.yaml
+# Unknown fields fail loudly, they don't silently misconfigure anything.
+# ============================================================
+
+apiVersion: debezium.io/v1alpha1
+kind: DebeziumServer
+metadata:
+  name: vocab-postgres-cdc
+  namespace: external
+spec:
+  version: "3.1"
+
+  quantity: 1
+
+  sources:
+    - name: vocab-postgres
+      class: io.debezium.connector.postgresql.PostgresConnector
+      config:
+        topic.prefix: vocab
+        database.hostname: postgresql.shared.svc.cluster.local
+        database.port: "5432"
+        database.dbname: vocab
+        database.user: "${DB_POSTGRESDB_USER}"
+        database.password: "${DB_POSTGRESDB_PASSWORD}"
+        plugin.name: pgoutput
+        slot.name: debezium_vocab
+        publication.autocreate.mode: filtered
+        # Keep the monitored table list as short as possible - fewer
+        # tables/columns means a smaller schema-history footprint and a
+        # smaller initial snapshot buffer, both of which matter directly
+        # at a 356Mi limit. Adjust to the real vocab schema, but resist
+        # adding tables you don't have a consumer for yet.
+        table.include.list: "public.words,public.categories"
+        # Incremental snapshotting reads the table in small chunks
+        # instead of buffering it whole - meaningfully lowers the peak
+        # memory spike during the first-ever sync, which is the single
+        # riskiest moment for OOM at this resource size.
+        incremental.snapshot.chunk.size: "256"
+
+  sink:
+    type: rabbitmqstream
+    config:
+      host: rabbitmq.shared.svc.cluster.local
+      port: "5552"
+      username: "${RABBITMQ_USERNAME}"
+      password: "${RABBITMQ_PASSWORD}"
+      virtualHost: "/"
+      # Small batches - trades a little throughput for a smaller
+      # in-flight buffer, which is the right trade at this memory size.
+      producer.batchSize: "20"
+      producer.maxUnconfirmedMessages: "1000"
+      stream.maxAge: "3d"
+      stream.maxLength: "200mb"
+
+  podTemplate:
+    spec:
+      containers:
+        - name: debezium-server
+          envFrom:
+            - secretRef:
+                name: debezium-env
+          env:
+            # Standard JVM env var, honored by any Java process without
+            # needing entrypoint support - this is what actually
+            # enforces the tight heap budget described above.
+            - name: JAVA_TOOL_OPTIONS
+              value: >-
+                -Xms96m -Xmx200m
+                -XX:MaxMetaspaceSize=64m
+                -XX:MaxDirectMemorySize=32m
+                -XX:+UseSerialGC
+                -XX:+ExitOnOutOfMemoryError
+          resources:
+            requests:
+              cpu: 50m
+              memory: 260Mi
+            limits:
+              cpu: 300m
+              memory: 356Mi
