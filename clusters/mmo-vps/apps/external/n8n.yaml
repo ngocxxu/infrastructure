@@ -47,15 +47,24 @@ spec:
       # Steady-state is ~310Mi / 3m CPU, but n8n's BOOT is CPU-heavy
       # (Node.js startup + DB migrations) and takes ~45s.
       # A 50m request starved it during boot, the liveness probe timed out,
-      # and kubelet killed it in a loop. Request is sized for STARTUP, not
-      # steady-state; that is what the scheduler guarantees under contention.
+      # and kubelet killed it in a loop. CPU request is sized for STARTUP,
+      # not steady-state; that is what the scheduler guarantees under
+      # contention.
+      #
+      # Memory limit set to 400Mi per explicit request (down from 1Gi).
+      # Measured steady-state is ~310Mi, so this leaves ~90Mi of burst
+      # room. The autopost workflow (video files through Drive->YouTube
+      # ->Facebook) already spools binaries to disk instead of RAM
+      # (N8N_DEFAULT_BINARY_DATA_MODE=filesystem below), which is what
+      # keeps that workflow from being the thing that blows this budget.
+      # If this still OOMKills, that workflow is the first place to look.
       resources:
         requests:
           cpu: 250m
           memory: 384Mi
         limits:
           cpu: 1000m
-          memory: 1Gi
+          memory: 420Mi
 
       # ponytail: chart 1.16.36's values schema doesn't allow `main.startupProbe`
       # (rejected on install). Fallback: widen initialDelaySeconds/failureThreshold

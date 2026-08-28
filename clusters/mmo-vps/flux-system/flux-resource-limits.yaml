@@ -41,7 +41,7 @@ spec:
               memory: 64Mi
             limits:
               cpu: 500m
-              memory: 192Mi
+              memory: 100Mi
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -59,7 +59,7 @@ spec:
               memory: 80Mi
             limits:
               cpu: 500m
-              memory: 192Mi
+              memory: 120Mi
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -77,7 +77,7 @@ spec:
               memory: 64Mi
             limits:
               cpu: 500m
-              memory: 192Mi
+              memory: 100Mi
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -95,7 +95,7 @@ spec:
               memory: 48Mi
             limits:
               cpu: 300m
-              memory: 128Mi
+              memory: 80Mi
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -113,7 +113,7 @@ spec:
               memory: 176Mi
             limits:
               cpu: 500m
-              memory: 320Mi
+              memory: 220Mi
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -131,4 +131,4 @@ spec:
               memory: 48Mi
             limits:
               cpu: 300m
-              memory: 128Mi
+              memory: 80Mi

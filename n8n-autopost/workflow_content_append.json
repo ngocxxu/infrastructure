@@ -1,0 +1,123 @@
+{
+  "name": "Content Pipeline - Append to Queue",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "content-pipeline-append",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-append",
+      "name": "Webhook Append",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-640, 300],
+      "webhookId": "content-pipeline-append",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "DAN_HEADER_AUTH_CRED_VAO_DAY"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "DAN_GOOGLE_SHEET_ID_VAO_DAY",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "queue",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "read-current-queue",
+      "name": "Read Current Queue",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [-416, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Input 1: rows from 'Read Current Queue' (all existing sheet rows)\n// Webhook body available via $('Webhook Append').first().json.body\nconst body = $('Webhook Append').first().json.body || {};\nconst incoming = Array.isArray(body.rows) ? body.rows : [];\n\nif (incoming.length === 0) {\n  throw new Error('body.rows rỗng hoặc thiếu — cần mảng row theo schema queue');\n}\n\n// Tìm row_id lớn nhất hiện có để cấp id mới, tránh trùng\nconst existing = $input.all().map(item => item.json);\nlet maxId = 0;\nfor (const row of existing) {\n  const id = parseInt(row.row_id, 10);\n  if (!isNaN(id) && id > maxId) maxId = id;\n}\n\nconst REQUIRED = ['lang', 'title', 'script', 'script_2'];\nconst out = [];\nlet nextId = maxId + 1;\n\nfor (const r of incoming) {\n  const missing = REQUIRED.filter(f => !r[f]);\n  if (missing.length > 0) {\n    throw new Error(`Row thiếu field bắt buộc: ${missing.join(', ')} — title=\"${r.title || '(không có)'}\"`);\n  }\n  if (r.lang !== 'vi' && r.lang !== 'en') {\n    throw new Error(`lang phải là 'vi' hoặc 'en', nhận: ${r.lang}`);\n  }\n\n  out.push({\n    json: {\n      row_id: nextId++,\n      status: 'review', // luôn ép cứng, không nhận từ client\n      social: r.social || 'all',\n      lang: r.lang,\n      drive_file_id: '',\n      cover_file_id: '',\n      title: r.title,\n      description: r.description || '',\n      tags: r.tags || '',\n      publish_at: r.publish_at || '',\n      posted_at: '',\n      script: r.script,\n      script_2: r.script_2\n    }\n  });\n}\n\nreturn out;"
+      },
+      "id": "build-rows",
+      "name": "Build Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-192, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "DAN_GOOGLE_SHEET_ID_VAO_DAY",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "queue",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData"
+        },
+        "options": {}
+      },
+      "id": "append-queue",
+      "name": "Append To Queue",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [32, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(item => item.json);\nreturn [{\n  json: {\n    ok: true,\n    appended: rows.length,\n    row_ids: rows.map(r => r.row_id)\n  }\n}];"
+      },
+      "id": "summarize",
+      "name": "Summarize Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [256, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond To Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [480, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Append": {
+      "main": [[{ "node": "Read Current Queue", "type": "main", "index": 0 }]]
+    },
+    "Read Current Queue": {
+      "main": [[{ "node": "Build Rows", "type": "main", "index": 0 }]]
+    },
+    "Build Rows": {
+      "main": [[{ "node": "Append To Queue", "type": "main", "index": 0 }]]
+    },
+    "Append To Queue": {
+      "main": [[{ "node": "Summarize Result", "type": "main", "index": 0 }]]
+    },
+    "Summarize Result": {
+      "main": [[{ "node": "Respond To Webhook", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

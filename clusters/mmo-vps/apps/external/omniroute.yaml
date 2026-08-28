@@ -13,12 +13,20 @@ spec:
       enabled: true
     image:
       ref: docker.io/diegosouzapw/omniroute:3.6.9 # {"$imagepolicy": "flux-system:omniroute-3.5.2"}
+    # Observed steady-state ~426-434Mi. 480Mi limit leaves ~10% margin.
+    # Note the gap: max-old-space-size above caps only the V8 OLD HEAP at
+    # 256Mi, but RSS lands ~430Mi because heap is not the whole picture -
+    # new-space, native buffers, and the Node runtime itself sit outside
+    # that cap. So 256Mi heap + ~175Mi non-heap is the real shape here.
+    # Don't "fix" the gap by lowering the limit toward 256Mi; that would
+    # OOMKill. If RSS needs to come down, lower max-old-space-size first
+    # and re-measure.
     resources:
       requests:
         memory: 128Mi
         cpu: 100m
       limits:
-        memory: 512Mi
+        memory: 480Mi
         cpu: 300m
   chart:
     spec:

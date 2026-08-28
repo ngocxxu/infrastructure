@@ -1,0 +1,1242 @@
+{
+  "name": "AutoPost - FB Page + YouTube (VI/EN)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "trigger-schedule",
+      "name": "Every 15 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -608,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "DAN_GOOGLE_SHEET_ID_VAO_DAY",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "queue",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "read-sheet",
+      "name": "Read Queue",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -384,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "ready",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filter-ready",
+      "name": "Filter Ready",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        -160,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convert publish_at (Vietnam local time) into the two formats YouTube and\n// Facebook each require.\n// publish_at is written in the sheet as: 2026-08-20 19:00\n\nconst out = [];\n\nfor (const item of $input.all()) {\n  const r = item.json;\n  const raw = (r.publish_at || '').toString().trim();\n\n  let publishAtISO = null;\n  let scheduledUnix = null;\n\n  if (raw) {\n    // Pin to the +07:00 offset (Asia/Saigon)\n    const iso = raw.replace(' ', 'T') + ':00+07:00';\n    const d = new Date(iso);\n    if (!isNaN(d.getTime())) {\n      publishAtISO = d.toISOString();          // YouTube: RFC3339 UTC\n      scheduledUnix = Math.floor(d.getTime() / 1000); // Facebook: unix seconds\n    }\n  }\n\n  // Facebook requires the schedule to be at least 10 minutes out.\n  // If it is too close, push it to 15 minutes.\n  const nowUnix = Math.floor(Date.now() / 1000);\n  if (scheduledUnix && scheduledUnix < nowUnix + 600) {\n    scheduledUnix = nowUnix + 900;\n    publishAtISO = new Date(scheduledUnix * 1000).toISOString();\n  }\n\n  // The sheet's `social` column narrows which platforms a row goes to.\n  // Blank or \"all\" posts everywhere; \"yt\"/\"youtube\" and \"fb\"/\"facebook\" restrict to\n  // one. Anything unrecognised falls back to posting on both, so a typo in the sheet\n  // can never silently drop a clip.\n  const social = (r.social || '').toString().toLowerCase().trim();\n  const onlyYT = social === 'yt' || social === 'youtube';\n  const onlyFB = social === 'fb' || social === 'facebook';\n\n  out.push({\n    json: {\n      ...r,\n      publishAtISO,\n      scheduledUnix,\n      hasSchedule: !!scheduledUnix,\n      lang: (r.lang || 'vi').toString().toLowerCase().trim(),\n      social,\n      postYT: !onlyFB,\n      postFB: !onlyYT\n    }\n  });\n}\n\nreturn out;"
+      },
+      "id": "prep-time",
+      "name": "Compute Publish Time",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        64,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.drive_file_id }}",
+          "mode": "id"
+        },
+        "options": {
+          "binaryPropertyName": "data"
+        }
+      },
+      "id": "drive-download",
+      "name": "Download From Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        288,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "vi-yt",
+                    "leftValue": "={{ $json.lang === 'vi' && $json.postYT }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "VI-YT"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "vi-fb",
+                    "leftValue": "={{ $json.lang === 'vi' && $json.postFB }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "VI-FB"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "en-yt",
+                    "leftValue": "={{ $json.lang === 'en' && $json.postYT }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "EN-YT"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "en-fb",
+                    "leftValue": "={{ $json.lang === 'en' && $json.postFB }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "EN-FB"
+            }
+          ]
+        },
+        "options": {
+          "allMatchingOutputs": true
+        }
+      },
+      "id": "switch-lang",
+      "name": "Split VI / EN",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        512,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "video",
+        "operation": "upload",
+        "title": "={{ $json.title }}",
+        "regionCode": "VN",
+        "categoryId": "26",
+        "options": {
+          "description": "={{ $json.description }}",
+          "privacyStatus": "private",
+          "publishAt": "={{ $json.publishAtISO }}",
+          "tags": "={{ $json.tags }}"
+        }
+      },
+      "id": "yt-vi",
+      "name": "YouTube VI",
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [
+        1008,
+        -48
+      ],
+      "notes": "Assign the YouTube OAuth2 credential for the VIETNAMESE channel"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://www.googleapis.com/youtube/v3/videos?part=status",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "youTubeOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ id: $json.uploadId, status: { privacyStatus: \"private\", selfDeclaredMadeForKids: false, publishAt: $('Compute Publish Time').item.json.publishAtISO } }) }}",
+        "options": {}
+      },
+      "id": "set-publishat-vi",
+      "name": "Set publishAt VI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        -48
+      ],
+      "notes": "Uses the same YouTube OAuth2 credential as the YouTube VI node. Skip this node if your n8n build already exposes publishAt in the upload node's Options."
+    },
+    {
+      "parameters": {
+        "resource": "video",
+        "operation": "upload",
+        "title": "={{ $json.title }}",
+        "regionCode": "US",
+        "categoryId": "26",
+        "options": {
+          "description": "={{ $json.description }}",
+          "privacyStatus": "private",
+          "publishAt": "={{ $json.publishAtISO }}",
+          "tags": "={{ $json.tags }}"
+        }
+      },
+      "id": "yt-en",
+      "name": "YouTube EN",
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [
+        1104,
+        576
+      ],
+      "notes": "Assign the YouTube OAuth2 credential for the ENGLISH channel"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://www.googleapis.com/youtube/v3/videos?part=status",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "youTubeOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ id: $json.uploadId, status: { privacyStatus: \"private\", selfDeclaredMadeForKids: false, publishAt: $('Compute Publish Time').item.json.publishAtISO } }) }}",
+        "options": {}
+      },
+      "id": "set-publishat-en",
+      "name": "Set publishAt EN",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1280,
+        576
+      ],
+      "notes": "Uses the same YouTube OAuth2 credential as the YouTube EN node. Skip this node if your n8n build already exposes publishAt in the upload node's Options."
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "DAN_GOOGLE_SHEET_ID_VAO_DAY",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "queue",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_id": "={{ $('Compute Publish Time').item.json.row_id }}",
+            "status": "posted",
+            "posted_at": "={{ new Date().toISOString() }}"
+          },
+          "matchingColumns": [
+            "row_id"
+          ],
+          "schema": [
+            {
+              "id": "row_id",
+              "displayName": "row_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lang",
+              "displayName": "lang",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "drive_file_id",
+              "displayName": "drive_file_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "cover_file_id",
+              "displayName": "cover_file_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "tags",
+              "displayName": "tags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "publish_at",
+              "displayName": "publish_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "posted_at",
+              "displayName": "posted_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "mark-done",
+      "name": "Mark As Posted",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2112,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v25.0/DAN_FB_PAGE_ID_VI_VAO_DAY/video_reels",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "upload_phase",
+              "value": "start"
+            },
+            {
+              "name": "access_token",
+              "value": "DAN_FB_PAGE_TOKEN_VI_VAO_DAY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fb-init-vi",
+      "name": "FB Reels Init VI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        832,
+        288
+      ],
+      "notes": "Reels phase 1/3. Returns video_id and upload_url."
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n drops binary on every HTTP Request hop, so the Reels upload step cannot see\n// the clip \"Download From Drive\" fetched. Re-attach it and pull the exact byte count\n// that rupload.facebook.com requires in its file_size header.\n//\n// Do NOT read the binary content here (getBinaryDataBuffer / base64 decode): under\n// filesystem binary mode + the JS task runner, binary reads inside a Code node throw\n// \"Unknown error\" - this is documented n8n behaviour, not a bug to work around.\n// n8n's own binary metadata already carries the exact size as `.bytes`, no read needed.\nconst src = $('Download From Drive').first();\nconst binary = src.binary;\nconst meta = binary && binary.data;\nif (!meta) {\n  throw new Error('No binary \"data\" on Download From Drive output - check that node ran.');\n}\n\nconst size = Number(meta.bytes);\nif (!Number.isFinite(size) || size <= 0) {\n  throw new Error('binary.data.bytes missing or invalid: ' + JSON.stringify(meta.bytes));\n}\n\nreturn $input.all().map(item => ({ json: { ...item.json, file_size: size }, binary }));"
+      },
+      "id": "fb-attach-vi",
+      "name": "FB Attach Clip VI",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1008,
+        288
+      ],
+      "notes": "Re-attaches the Drive clip and computes file_size for the upload header."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.upload_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "OAuth DAN_FB_PAGE_TOKEN_VI_VAO_DAY"
+            },
+            {
+              "name": "offset",
+              "value": "0"
+            },
+            {
+              "name": "file_size",
+              "value": "={{ $json.file_size }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/octet-stream"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "id": "fb-upload-vi",
+      "name": "FB Reels Upload VI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1184,
+        288
+      ],
+      "notes": "Reels phase 2/3. Uploads to the rupload host returned by phase 1."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v25.0/DAN_FB_PAGE_ID_VI_VAO_DAY/video_reels",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "video_id",
+              "value": "={{ $('FB Reels Init VI').item.json.video_id }}"
+            },
+            {
+              "name": "upload_phase",
+              "value": "finish"
+            },
+            {
+              "name": "video_state",
+              "value": "SCHEDULED"
+            },
+            {
+              "name": "title",
+              "value": "={{ $('Compute Publish Time').item.json.title }}"
+            },
+            {
+              "name": "description",
+              "value": "={{ $('Compute Publish Time').item.json.description }}"
+            },
+            {
+              "name": "scheduled_publish_time",
+              "value": "={{ $('Compute Publish Time').item.json.scheduledUnix }}"
+            },
+            {
+              "name": "access_token",
+              "value": "DAN_FB_PAGE_TOKEN_VI_VAO_DAY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fb-finish-vi",
+      "name": "FB Reels Finish VI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1376,
+        288
+      ],
+      "notes": "Reels phase 3/3. video_state=SCHEDULED needs scheduled_publish_time 10min-29days out."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v25.0/DAN_FB_PAGE_ID_EN_VAO_DAY/video_reels",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "upload_phase",
+              "value": "start"
+            },
+            {
+              "name": "access_token",
+              "value": "DAN_FB_PAGE_TOKEN_EN_VAO_DAY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fb-init-en",
+      "name": "FB Reels Init EN",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        864,
+        912
+      ],
+      "notes": "Reels phase 1/3. Returns video_id and upload_url."
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n drops binary on every HTTP Request hop, so the Reels upload step cannot see\n// the clip \"Download From Drive\" fetched. Re-attach it and pull the exact byte count\n// that rupload.facebook.com requires in its file_size header.\n//\n// Do NOT read the binary content here (getBinaryDataBuffer / base64 decode): under\n// filesystem binary mode + the JS task runner, binary reads inside a Code node throw\n// \"Unknown error\" - this is documented n8n behaviour, not a bug to work around.\n// n8n's own binary metadata already carries the exact size as `.bytes`, no read needed.\nconst src = $('Download From Drive').first();\nconst binary = src.binary;\nconst meta = binary && binary.data;\nif (!meta) {\n  throw new Error('No binary \"data\" on Download From Drive output - check that node ran.');\n}\n\nconst size = Number(meta.bytes);\nif (!Number.isFinite(size) || size <= 0) {\n  throw new Error('binary.data.bytes missing or invalid: ' + JSON.stringify(meta.bytes));\n}\n\nreturn $input.all().map(item => ({ json: { ...item.json, file_size: size }, binary }));"
+      },
+      "id": "fb-attach-en",
+      "name": "FB Attach Clip EN",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        912
+      ],
+      "notes": "Re-attaches the Drive clip and computes file_size for the upload header."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.upload_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "OAuth DAN_FB_PAGE_TOKEN_EN_VAO_DAY"
+            },
+            {
+              "name": "offset",
+              "value": "0"
+            },
+            {
+              "name": "file_size",
+              "value": "={{ $json.file_size }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/octet-stream"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "id": "fb-upload-en",
+      "name": "FB Reels Upload EN",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1216,
+        912
+      ],
+      "notes": "Reels phase 2/3. Uploads to the rupload host returned by phase 1."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v25.0/DAN_FB_PAGE_ID_EN_VAO_DAY/video_reels",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "video_id",
+              "value": "={{ $('FB Reels Init EN').item.json.video_id }}"
+            },
+            {
+              "name": "upload_phase",
+              "value": "finish"
+            },
+            {
+              "name": "video_state",
+              "value": "SCHEDULED"
+            },
+            {
+              "name": "title",
+              "value": "={{ $('Compute Publish Time').item.json.title }}"
+            },
+            {
+              "name": "description",
+              "value": "={{ $('Compute Publish Time').item.json.description }}"
+            },
+            {
+              "name": "scheduled_publish_time",
+              "value": "={{ $('Compute Publish Time').item.json.scheduledUnix }}"
+            },
+            {
+              "name": "access_token",
+              "value": "DAN_FB_PAGE_TOKEN_EN_VAO_DAY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fb-finish-en",
+      "name": "FB Reels Finish EN",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1408,
+        912
+      ],
+      "notes": "Reels phase 3/3. video_state=SCHEDULED needs scheduled_publish_time 10min-29days out."
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Compute Publish Time').item.json.cover_file_id }}",
+          "mode": "id"
+        },
+        "options": {
+          "binaryPropertyName": "cover"
+        }
+      },
+      "id": "yt-cover-vi",
+      "name": "YT Cover VI",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1376,
+        -48
+      ],
+      "notes": "Downloads the cover image named in the sheet's cover_file_id column."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId={{ $('YouTube VI').item.json.uploadId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "youTubeOAuth2Api",
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "cover",
+        "options": {}
+      },
+      "id": "yt-thumb-vi",
+      "name": "YT Set Thumbnail VI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1552,
+        -48
+      ],
+      "notes": "Needs the same YouTube OAuth2 credential as the upload node. Image must be <=2MB, jpeg/png."
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Compute Publish Time').item.json.cover_file_id }}",
+          "mode": "id"
+        },
+        "options": {
+          "binaryPropertyName": "cover"
+        }
+      },
+      "id": "fb-cover-vi",
+      "name": "FB Cover VI",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1552,
+        288
+      ],
+      "notes": "Downloads the cover image named in the sheet's cover_file_id column."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v25.0/{{ $('FB Reels Init VI').item.json.video_id }}/thumbnails",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "source",
+              "inputDataFieldName": "cover"
+            },
+            {
+              "name": "is_preferred",
+              "value": "true"
+            },
+            {
+              "name": "access_token",
+              "value": "DAN_FB_PAGE_TOKEN_VI_VAO_DAY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fb-thumb-vi",
+      "name": "FB Set Cover VI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1728,
+        288
+      ],
+      "notes": "Requires pages_read_user_content + pages_manage_engagement on the page token."
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Compute Publish Time').item.json.cover_file_id }}",
+          "mode": "id"
+        },
+        "options": {
+          "binaryPropertyName": "cover"
+        }
+      },
+      "id": "yt-cover-en",
+      "name": "YT Cover EN",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1456,
+        576
+      ],
+      "notes": "Downloads the cover image named in the sheet's cover_file_id column."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId={{ $('YouTube EN').item.json.uploadId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "youTubeOAuth2Api",
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "cover",
+        "options": {}
+      },
+      "id": "yt-thumb-en",
+      "name": "YT Set Thumbnail EN",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1632,
+        576
+      ],
+      "notes": "Needs the same YouTube OAuth2 credential as the upload node. Image must be <=2MB, jpeg/png."
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Compute Publish Time').item.json.cover_file_id }}",
+          "mode": "id"
+        },
+        "options": {
+          "binaryPropertyName": "cover"
+        }
+      },
+      "id": "fb-cover-en",
+      "name": "FB Cover EN",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1584,
+        912
+      ],
+      "notes": "Downloads the cover image named in the sheet's cover_file_id column."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v25.0/{{ $('FB Reels Init EN').item.json.video_id }}/thumbnails",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "source",
+              "inputDataFieldName": "cover"
+            },
+            {
+              "name": "is_preferred",
+              "value": "true"
+            },
+            {
+              "name": "access_token",
+              "value": "DAN_FB_PAGE_TOKEN_EN_VAO_DAY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fb-thumb-en",
+      "name": "FB Set Cover EN",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        912
+      ],
+      "notes": "Requires pages_read_user_content + pages_manage_engagement on the page token."
+    }
+  ],
+  "connections": {
+    "Every 15 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Read Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Queue": {
+      "main": [
+        [
+          {
+            "node": "Filter Ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Ready": {
+      "main": [
+        [
+          {
+            "node": "Compute Publish Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute Publish Time": {
+      "main": [
+        [
+          {
+            "node": "Download From Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download From Drive": {
+      "main": [
+        [
+          {
+            "node": "Split VI / EN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split VI / EN": {
+      "main": [
+        [
+          {
+            "node": "YouTube VI",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "FB Reels Init VI",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "YouTube EN",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "FB Reels Init EN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YouTube VI": {
+      "main": [
+        [
+          {
+            "node": "Set publishAt VI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set publishAt VI": {
+      "main": [
+        [
+          {
+            "node": "YT Cover VI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YouTube EN": {
+      "main": [
+        [
+          {
+            "node": "Set publishAt EN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set publishAt EN": {
+      "main": [
+        [
+          {
+            "node": "YT Cover EN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FB Reels Init VI": {
+      "main": [
+        [
+          {
+            "node": "FB Attach Clip VI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FB Attach Clip VI": {
+      "main": [
+        [
+          {
+            "node": "FB Reels Upload VI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FB Reels Upload VI": {
+      "main": [
+        [
+          {
+            "node": "FB Reels Finish VI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FB Reels Finish VI": {
+      "main": [
+        [
+          {
+            "node": "FB Cover VI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FB Reels Init EN": {
+      "main": [
+        [
+          {
+            "node": "FB Attach Clip EN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FB Attach Clip EN": {
+      "main": [
+        [
+          {
+            "node": "FB Reels Upload EN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FB Reels Upload EN": {
+      "main": [
+        [
+          {
+            "node": "FB Reels Finish EN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FB Reels Finish EN": {
+      "main": [
+        [
+          {
+            "node": "FB Cover EN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FB Cover VI": {
+      "main": [
+        [
+          {
+            "node": "FB Set Cover VI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FB Set Cover VI": {
+      "main": [
+        [
+          {
+            "node": "Mark As Posted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FB Cover EN": {
+      "main": [
+        [
+          {
+            "node": "FB Set Cover EN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FB Set Cover EN": {
+      "main": [
+        [
+          {
+            "node": "Mark As Posted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YT Cover VI": {
+      "main": [
+        [
+          {
+            "node": "YT Set Thumbnail VI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YT Set Thumbnail VI": {
+      "main": [
+        [
+          {
+            "node": "Mark As Posted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YT Cover EN": {
+      "main": [
+        [
+          {
+            "node": "YT Set Thumbnail EN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YT Set Thumbnail EN": {
+      "main": [
+        [
+          {
+            "node": "Mark As Posted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

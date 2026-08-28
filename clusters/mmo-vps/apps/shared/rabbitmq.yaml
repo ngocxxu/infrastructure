@@ -1,0 +1,129 @@
+# ============================================================
+# RabbitMQ - single broker for queues, pub/sub AND streams
+# ============================================================
+# Replaces both BullMQ (Redis-backed job queue) and the previously
+# planned Aiven Kafka. One broker covers all three patterns:
+#
+#   queue    -> classic AMQP queues (background jobs, payments)
+#   pub/sub  -> topic/fanout exchanges (fan out one event to N consumers)
+#   stream   -> rabbitmq_stream plugin (append-only log with replay,
+#               this is what Debezium CDC writes into)
+#
+# NOTE ON MEMORY: RabbitMQ does NOT treat resources.limits.memory as its
+# own budget automatically - it uses `memoryHighWatermark`. The chart
+# defaults to relative 0.4, meaning it starts blocking publishers at 40%
+# of the limit. That is set explicitly below so the behaviour is obvious
+# rather than inherited.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: rabbitmq
+  namespace: shared
+spec:
+  interval: 5m
+  releaseName: rabbitmq
+  chart:
+    spec:
+      chart: rabbitmq
+      sourceRef:
+        kind: HelmRepository
+        name: bitnami
+        namespace: flux-system
+      # Pin like redis/postgresql do. Verify this version exists before
+      # applying:  helm search repo bitnami/rabbitmq --versions
+      version: "16.0.5"
+  targetNamespace: shared
+  install:
+    createNamespace: true
+    timeout: 10m
+    remediation:
+      retries: 2
+  upgrade:
+    timeout: 10m
+    remediation:
+      retries: 2
+  values:
+    # Same bitnamilegacy pattern already used by redis/postgresql in
+    # this cluster - Bitnami moved the free images to that org.
+    image:
+      repository: bitnamilegacy/rabbitmq
+
+    auth:
+      username: app
+      existingPasswordSecret: rabbitmq-env
+      existingSecretPasswordKey: RABBITMQ_PASSWORD
+      existingErlangSecret: rabbitmq-env
+      existingSecretErlangKey: RABBITMQ_ERLANG_COOKIE
+
+    # Single node - no peer discovery needed, and the k8s peer discovery
+    # plugin would just add RBAC + API calls for nothing.
+    replicaCount: 1
+    clustering:
+      enabled: false
+
+    # rabbitmq_stream        -> the Stream protocol (port 5552), required
+    #                           by Debezium's `rabbitmqstream` sink
+    # rabbitmq_stream_management -> stream visibility in the mgmt UI
+    # Defaults (`plugins`) keep rabbitmq_management. The chart's default
+    # extraPlugins is rabbitmq_auth_backend_ldap, which is dropped here
+    # since nothing uses LDAP.
+    extraPlugins: "rabbitmq_stream rabbitmq_stream_management"
+
+    # Stream protocol port is NOT part of the chart's built-in service
+    # ports, so it has to be added by hand on both the container and
+    # the Service.
+    extraContainerPorts:
+      - name: stream
+        containerPort: 5552
+    service:
+      extraPorts:
+        - name: stream
+          port: 5552
+          targetPort: 5552
+
+    # advertised_host must be the address clients are told to reconnect
+    # to. Without it the broker advertises the pod hostname, which
+    # resolves for nothing outside the pod, and stream clients fail on
+    # the second connection rather than the first - a confusing failure.
+    extraConfiguration: |-
+      stream.advertised_host = rabbitmq.shared.svc.cluster.local
+      stream.advertised_port = 5552
+
+    persistence:
+      enabled: true
+      size: 2Gi
+      storageClass: "local-path"
+
+    # DELIBERATELY TIGHT - 256Mi limit per explicit request, not the
+    # 512Mi I'd default to. Erlang VM has no big fixed JVM-style
+    # overhead like Debezium does, so 256Mi is plausible for low
+    # traffic, but it is genuinely tight once the stream plugin holds
+    # segment metadata in memory. Watch `kubectl top pod` after this
+    # goes live - if it sits above ~200Mi at idle, there's no runway
+    # left for a burst.
+    resources:
+      requests:
+        cpu: 50m
+        memory: 192Mi
+      limits:
+        cpu: 300m
+        memory: 256Mi
+
+    memoryHighWatermark:
+      enabled: true
+      type: relative
+      # 0.5 of the 256Mi limit = ~128Mi. Lowered from the usual 0.4-of-
+      # a-bigger-limit ratio: with only 256Mi of total runway, the
+      # watermark needs to trip earlier so there's still room left for
+      # the Erlang VM's own baseline (queues, connections, the mgmt
+      # plugin) between "publishers blocked" and "OOM-killed".
+      value: 0.5
+
+    podSecurityContext:
+      enabled: true
+      fsGroup: 1001
+    containerSecurityContext:
+      enabled: true
+      runAsUser: 1001
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false

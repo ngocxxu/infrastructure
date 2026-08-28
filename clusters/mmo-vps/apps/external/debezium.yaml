@@ -1,0 +1,172 @@
+# ============================================================
+# Debezium Server: Postgres -> RabbitMQ Stream (CDC)
+# Ref: https://debezium.io/blog/2025/03/18/debezium-charts/
+#      https://deepwiki.com/debezium/debezium-server/4.2.2-rabbitmq-sinks
+# ============================================================
+# MEMORY WARNING - read before applying:
+# Limit is set to 356Mi PER EXPLICIT REQUEST (raised from an earlier
+# 300Mi ask, still far below the official 1Gi/2Gi guidance for the
+# smallest realistic Debezium Server deployment). JVM footprint is
+# dominated by fixed overhead (heap + metaspace + thread stacks + direct
+# buffers + GC structures), which does NOT shrink with low traffic - it
+# shrinks only with aggressive heap tuning, and even then has a floor.
+#
+# Rough budget at these JVM flags:
+#   -Xmx200m                         heap
+#   -XX:MaxMetaspaceSize=64m         class metadata (Debezium loads a lot)
+#   -XX:MaxDirectMemorySize=32m      network buffers
+#   thread stacks (~20-50 threads)   ~30-40Mi
+#   JVM native overhead (code cache) ~30-40Mi
+#   ------------------------------------------
+#   ~356-376Mi realistic total  -  right at or just over the 356Mi limit
+#
+# Better odds than the 300Mi version, but still no real margin - the
+# initial snapshot (reads the whole table once at startup) is the
+# riskiest moment, since it needs buffer beyond steady-state. If it
+# CrashLoopBackOffs:
+#   kubectl logs -n external -l app=vocab-postgres-cdc --previous
+#   kubectl describe pod -n external -l app=vocab-postgres-cdc | grep -A5 "Last State"
+# "OOMKilled" + exit code 137 confirms this. Fallback: raise to 448-512Mi
+# first (still below official 1Gi, still much tighter than default) before
+# jumping straight back to 1Gi.
+#
+# CRD SCHEMA WARNING: same caveat as before - verify field names with
+# `kubectl explain debeziumserver.spec --recursive` and
+# `kubectl apply --dry-run=server` before a real apply. Unknown fields
+# fail loudly, they don't silently misconfigure anything.
+# ============================================================
+
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: debezium-operator
+  namespace: external
+spec:
+  interval: 10m
+  chart:
+    spec:
+      chart: debezium-operator
+      sourceRef:
+        kind: HelmRepository
+        name: debezium
+        namespace: flux-system
+  install:
+    createNamespace: true
+    timeout: 10m
+    remediation:
+      retries: 2
+  upgrade:
+    timeout: 10m
+    remediation:
+      retries: 2
+  values:
+    # The operator itself is a normal-sized k8s controller, not a CDC
+    # engine - this is NOT part of the 300Mi budget above, that number
+    # is for the DebeziumServer pod the operator manages.
+    resources:
+      requests:
+        cpu: 25m
+        memory: 96Mi
+      limits:
+        cpu: 200m
+        memory: 160Mi
+
+---
+# Credentials for Postgres source + RabbitMQ Stream sink.
+# Same Doppler pattern already used for n8n/redis/rabbitmq.
+#
+# Required keys in the "debezium" Doppler project:
+#   DB_POSTGRESDB_USER, DB_POSTGRESDB_PASSWORD  - a REPLICATION-privileged
+#     role, not the app's normal DB user (logical replication needs
+#     REPLICATION grant, which is broader than a typical app role should have)
+apiVersion: secrets.doppler.com/v1alpha1
+kind: DopplerSecret
+metadata:
+  name: debezium-secret-ref
+  namespace: external
+spec:
+  tokenSecret:
+    name: doppler-token-debezium
+    namespace: external
+  managedSecret:
+    name: debezium-env
+    namespace: external
+
+---
+# The actual CDC pipeline: reads Postgres WAL, writes to RabbitMQ Stream.
+# VERIFY SCHEMA before applying - see warning at top of file.
+apiVersion: debezium.io/v1alpha1
+kind: DebeziumServer
+metadata:
+  name: vocab-postgres-cdc
+  namespace: external
+spec:
+  version: "3.1"
+
+  quantity: 1
+
+  sources:
+    - name: vocab-postgres
+      class: io.debezium.connector.postgresql.PostgresConnector
+      config:
+        topic.prefix: vocab
+        database.hostname: postgresql.shared.svc.cluster.local
+        database.port: "5432"
+        database.dbname: vocab
+        database.user: "${DB_POSTGRESDB_USER}"
+        database.password: "${DB_POSTGRESDB_PASSWORD}"
+        plugin.name: pgoutput
+        slot.name: debezium_vocab
+        publication.autocreate.mode: filtered
+        # Keep the monitored table list as short as possible - fewer
+        # tables/columns means a smaller schema-history footprint and a
+        # smaller initial snapshot buffer, both of which matter directly
+        # at a 300Mi limit. Adjust to the real vocab schema, but resist
+        # adding tables you don't have a consumer for yet.
+        table.include.list: "public.words,public.categories"
+        # Incremental snapshotting reads the table in small chunks
+        # instead of buffering it whole - meaningfully lowers the peak
+        # memory spike during the first-ever sync, which is the single
+        # riskiest moment for OOM at this resource size.
+        incremental.snapshot.chunk.size: "256"
+
+  sink:
+    type: rabbitmqstream
+    config:
+      host: rabbitmq.shared.svc.cluster.local
+      port: "5552"
+      username: "${RABBITMQ_USERNAME}"
+      password: "${RABBITMQ_PASSWORD}"
+      virtualHost: "/"
+      # Small batches - trades a little throughput for a smaller
+      # in-flight buffer, which is the right trade at this memory size.
+      producer.batchSize: "20"
+      producer.maxUnconfirmedMessages: "1000"
+      stream.maxAge: "3d"
+      stream.maxLength: "200mb"
+
+  podTemplate:
+    spec:
+      containers:
+        - name: debezium-server
+          envFrom:
+            - secretRef:
+                name: debezium-env
+          env:
+            # Standard JVM env var, honored by any Java process without
+            # needing entrypoint support - this is what actually
+            # enforces the tight heap budget described above.
+            - name: JAVA_TOOL_OPTIONS
+              value: >-
+                -Xms96m -Xmx200m
+                -XX:MaxMetaspaceSize=64m
+                -XX:MaxDirectMemorySize=32m
+                -XX:+UseSerialGC
+                -XX:+ExitOnOutOfMemoryError
+          resources:
+            requests:
+              cpu: 50m
+              memory: 260Mi
+            limits:
+              cpu: 300m
+              memory: 356Mi

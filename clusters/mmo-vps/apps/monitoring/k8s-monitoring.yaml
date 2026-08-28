@@ -71,34 +71,41 @@ spec:
       
       node-exporter:
         enabled: true
+        # Observed ~15-20Mi. Old 20Mi limit left ~0-5Mi headroom - too
+        # thin for a pod that's supposed to be the least of your worries.
         resources:
           requests:
             cpu: 10m
-            memory: 10Mi
+            memory: 16Mi
           limits:
             cpu: 20m
-            memory: 20Mi
-      
+            memory: 32Mi
+
       kube-state-metrics:
         enabled: true
+        # Observed ~40Mi against a 40Mi limit - i.e. running AT 100% of
+        # its own ceiling already. This was one OOM-kill away.
         resources:
           requests:
             cpu: 10m
-            memory: 20Mi
+            memory: 32Mi
           limits:
             cpu: 20m
-            memory: 40Mi
+            memory: 64Mi
 
       alloy:
         enabled: true
-        # Observed ~320Mi, was at 91% of the old 350Mi limit (OOMKill risk).
+        # Observed ~294-320Mi. 400Mi limit leaves ~20-25% margin.
+        # Request lowered to 320Mi so the scheduler reserves closer to
+        # real usage rather than near the limit - on a node this tight,
+        # over-requesting wastes allocatable that nothing ever uses.
         resources:
           requests:
             cpu: 20m
-            memory: 340Mi
+            memory: 320Mi
           limits:
             cpu: 100m
-            memory: 512Mi
+            memory: 400Mi
         extraRelabelingRules: |
           rule {
             action        = "drop"

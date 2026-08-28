@@ -17,11 +17,34 @@ spec:
         namespace: flux-system
       version: "1.7.1"
   values:
+    # NOTE: live cluster shows this pod at exactly 256Mi request AND
+    # 256Mi limit - a suspiciously round, identical number that looks
+    # like an un-overridden chart default (kubebuilder-scaffolded
+    # operators commonly ship Guaranteed-QoS defaults like this), not
+    # the 30Mi/15Mi set below. That strongly suggests `controllerManager`
+    # is the wrong values key for this chart version and the override
+    # was silently ignored - Helm does not warn on unknown keys.
+    #
+    # Both plausible key paths are set here as a harmless hedge (Helm
+    # ignores keys a chart doesn't recognize, so setting both costs
+    # nothing). After this reconciles, confirm which one actually took:
+    #   kubectl get deployment doppler-kubernetes-operator-controller-manager \
+    #     -n flux-system -o jsonpath='{.spec.template.spec.containers[0].resources}'
+    # If it's STILL 256Mi/256Mi after that, pull the chart locally
+    # (`helm pull doppler/doppler-kubernetes-operator --untar`) to find
+    # the real key rather than guessing a third time.
     controllerManager:
       resources:
         limits:
           cpu: 50m
-          memory: 30Mi
+          memory: 256Mi
         requests:
           cpu: 20m
-          memory: 15Mi
+          memory: 256Mi
+    resources:
+      limits:
+        cpu: 50m
+        memory: 256Mi
+      requests:
+        cpu: 20m
+        memory: 256Mi
