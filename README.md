@@ -80,3 +80,14 @@ helm secrets upgrade --install postgresql ./helms/postgresql \
 ```bash
 ssh ngocxxu@ip_host
 ```
+
+# Cleaning volume in VPS (safe)
+```bash
+sudo k3s crictl rmi --prune
+```
+→ delete old images
+
+```bash
+sudo journalctl --vacuum-size=200M
+```
+→ delete systemd journal log
