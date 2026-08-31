@@ -38,14 +38,3 @@ metadata:
 spec:
   interval: 1h
   url: https://community-charts.github.io/helm-charts
----
-# Helm Repository for Debezium (operator + platform charts)
-# https://debezium.io/blog/2025/03/18/debezium-charts/
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: HelmRepository
-metadata:
-  name: debezium
-  namespace: flux-system
-spec:
-  interval: 1h
-  url: https://charts.debezium.io

@@ -23,8 +23,3 @@ resources:
   # PostgreSQL (shared/postgresql-0) and survives.
   - n8n.yaml
   - n8n-secret.yaml
-
-  # --- Debezium: Postgres -> RabbitMQ Stream CDC ---
-  # See debezium.yaml for the 300Mi memory-budget warning and CRD-schema
-  # verification steps before applying.
-  - debezium.yaml

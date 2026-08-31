@@ -33,6 +33,19 @@ spec:
       # Load all other environment variables from Doppler secret
       # All variables with UPPERCASE names from Doppler will be available
       extraEnvVarsSecret: postgresql-env
+      # Logical replication for the vocab semantic-search CDC listener
+      # (pg-logical-replication, in vocab-be). REQUIRES A RESTART.
+      #
+      # max_slot_wal_keep_size is NOT optional: the PVC below is 1Gi, and
+      # a replication slot with a dead/disconnected consumer retains WAL
+      # indefinitely - it would fill that 1Gi and, per the OOM warning a
+      # few lines down, take BOTH vocab and n8n down with it. This caps
+      # retained WAL so Postgres drops the slot instead of filling disk.
+      # Losing the slot is recoverable (the embeddedAt poll worker
+      # re-syncs); a full disk on a shared instance is not.
+      extendedConfiguration: |-
+        wal_level = logical
+        max_slot_wal_keep_size = 256MB
       persistence:
         enabled: true
         size: 1Gi
