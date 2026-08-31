@@ -94,29 +94,11 @@ spec:
             memory: 64Mi
 
       alloy:
-        enabled: true
-        # Observed ~294-320Mi. 400Mi limit leaves ~20-25% margin.
-        # Request lowered to 320Mi so the scheduler reserves closer to
-        # real usage rather than near the limit - on a node this tight,
-        # over-requesting wastes allocatable that nothing ever uses.
-        resources:
-          requests:
-            cpu: 20m
-            memory: 320Mi
-          limits:
-            cpu: 100m
-            memory: 400Mi
-        extraRelabelingRules: |
-          rule {
-            action        = "drop"
-            source_labels = ["__name__"]
-            regex         = "container_network_.*"
-          }
-          rule {
-            action        = "drop"
-            source_labels = ["__name__"]
-            regex         = "kube_pod_owner"
-          }
+        # ponytail: metrics collector disabled to reclaim ~330Mi RAM on a
+        # 4.7GiB node. Log shipping (pod_logs below) stays on so Grafana
+        # Cloud Alerting -> Discord still works off log content. Re-enable
+        # if cluster-metrics dashboards are needed again.
+        enabled: false
 
     logs:
       enabled: true
