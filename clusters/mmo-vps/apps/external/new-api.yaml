@@ -3,10 +3,13 @@
 # Deployed alongside omniroute for an A/B memory comparison; omniroute stays
 # running and untouched. See the sizing note on resources below.
 #
-# SECURITY: on an empty database new-api auto-creates root/123456
-# (model/main.go createRootAccountIfNeed). No Ingress is defined here on
-# purpose — reach it with `kubectl port-forward`, change the root password,
-# THEN add the Ingress. Do not expose this publicly before that.
+# SECURITY: there is no default password — createRootAccountIfNeed() in
+# model/main.go is dead code with no callers. main.go calls CheckSetup()
+# instead, which leaves the instance in an uninitialised state served by
+# controller/setup.go. PostSetup there is UNAUTHENTICATED: the first request
+# to reach /setup on a fresh database claims the admin account. Complete the
+# setup wizard immediately after the first rollout; until you do, this URL is
+# open to whoever finds it.
 #
 # Storage: SQLite lives in /data on the PVC. No PostgreSQL/Redis needed;
 # the upstream docker-compose pulls both in, but that is the multi-node
@@ -135,3 +138,25 @@ spec:
       name: http
   selector:
     app.kubernetes.io/name: new-api
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: new-api
+  namespace: external
+  labels:
+    app.kubernetes.io/name: new-api
+spec:
+  ingressClassName: traefik
+  # No tls block: TLS terminates upstream, same as n8n and omniroute.
+  rules:
+    - host: new-api.ngocquach.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: new-api
+                port:
+                  number: 3000

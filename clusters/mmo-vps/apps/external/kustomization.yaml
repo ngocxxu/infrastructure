@@ -18,7 +18,8 @@ resources:
   - omniroute.yaml
 
   # --- new-api: trial, running ALONGSIDE omniroute for a memory A/B.
-  # No Ingress yet on purpose (default root/123456 on first boot).
+  # Public at new-api.ngocquach.com. /setup is unauthenticated until the
+  # wizard is completed — do that on the first rollout.
   - new-api.yaml
 
   # --- n8n: re-enabled ---
