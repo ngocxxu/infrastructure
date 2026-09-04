@@ -64,40 +64,96 @@ spec:
     opencost:
       enabled: false
 
+    # ── Resource limits, corrected ──────────────────────────────────────
+    # `resources:` under metrics.node-exporter / metrics.kube-state-metrics
+    # / logs.pod_logs used to live right here and looked correct, but none
+    # of it ever reached a container: `helm show values k8s-monitoring
+    # --version 1.6.5` confirms those three blocks are pure SCRAPE-JOB
+    # config (enabled, labelMatchers, relabeling rules) with no `resources`
+    # field in their schema at all. `kubectl get <workload> -o
+    # jsonpath='{.spec...resources}'` on the live cluster confirmed every
+    # one of them was actually running with `{}` - no request, no limit.
+    #
+    # The real paths, verified the same way, are the top-level keys that
+    # pass straight through to each bundled subchart:
+    #   - kube-state-metrics.resources        (this chart's own root)
+    #   - prometheus-node-exporter.resources   (this chart's own root)
+    #   - alloy.alloy.resources                (outer key = collector
+    #     alloy-logs.alloy.resources             instance name, inner
+    #                                             `alloy:` = passthrough
+    #                                             into grafana/alloy)
+    # Values below are unchanged from what was already observed/tuned;
+    # only the location moved.
+
+    kube-state-metrics:
+      # Observed ~40-77Mi. Old placement meant this had run with NO
+      # ceiling at all - not "at 100% of its limit" as previously noted,
+      # since the limit was never applied.
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits:
+          cpu: 20m
+          memory: 64Mi
+
+    prometheus-node-exporter:
+      # Observed ~15-20Mi, same "silently had no ceiling" situation.
+      resources:
+        requests:
+          cpu: 10m
+          memory: 16Mi
+        limits:
+          cpu: 20m
+          memory: 32Mi
+
+    alloy:
+      alloy:
+        # This is the metrics/singleton collector (pod alloy-0). Observed
+        # ~130-140Mi with no prior ceiling.
+        resources:
+          requests:
+            cpu: 20m
+            memory: 96Mi
+          limits:
+            cpu: 100m
+            memory: 192Mi
+
+    alloy-logs:
+      alloy:
+        # Observed ~200Mi with no prior ceiling (the repo comment said
+        # "~77Mi, 77% of 100Mi limit" - that limit was never real; 200Mi
+        # is the actual number this needs room for).
+        resources:
+          requests:
+            cpu: 20m
+            memory: 96Mi
+          limits:
+            cpu: 60m
+            memory: 256Mi
+
     metrics:
       enabled: true
       cost:
         enabled: false
-      
+
       node-exporter:
         enabled: true
-        # Observed ~15-20Mi. Old 20Mi limit left ~0-5Mi headroom - too
-        # thin for a pod that's supposed to be the least of your worries.
-        resources:
-          requests:
-            cpu: 10m
-            memory: 16Mi
-          limits:
-            cpu: 20m
-            memory: 32Mi
 
       kube-state-metrics:
         enabled: true
-        # Observed ~40Mi against a 40Mi limit - i.e. running AT 100% of
-        # its own ceiling already. This was one OOM-kill away.
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 20m
-            memory: 64Mi
 
       alloy:
-        # ponytail: metrics collector disabled to reclaim ~330Mi RAM on a
-        # 4.7GiB node. Log shipping (pod_logs below) stays on so Grafana
-        # Cloud Alerting -> Discord still works off log content. Re-enable
-        # if cluster-metrics dashboards are needed again.
+        # NOTE: this does NOT disable the metrics collector - verified via
+        # `helm show values`, this key only toggles Alloy's OWN
+        # self-telemetry scrape job. The actual metrics collector (alloy-0:
+        # kubelet/cadvisor/kube-state-metrics/node-exporter scrape +
+        # remote_write to Grafana Cloud) keeps running regardless of this
+        # flag - confirmed by reading its live rendered config. The real
+        # global switch is `metrics.enabled` above. Left as `false` here
+        # unchanged pending a decision on whether to actually turn metrics
+        # off (see PR discussion) - fixing the resource-path bug is a
+        # separate, lower-risk change from that decision.
         enabled: false
 
     logs:
@@ -111,17 +167,9 @@ spec:
           - monitoring
           - shared
           - project-vocab
-        # Observed ~77Mi, was at 77% of the old 100Mi limit.
-        resources:
-          requests:
-            cpu: 20m
-            memory: 96Mi
-          limits:
-            cpu: 60m
-            memory: 160Mi
 
       cluster_events:
-        enabled: false 
+        enabled: false
 
     receivers:
       grpc: { enabled: false }
