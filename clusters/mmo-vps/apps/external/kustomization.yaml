@@ -17,6 +17,10 @@ resources:
   - image-update-automation.yaml
   - omniroute.yaml
 
+  # --- new-api: trial, running ALONGSIDE omniroute for a memory A/B.
+  # No Ingress yet on purpose (default root/123456 on first boot).
+  - new-api.yaml
+
   # --- n8n: re-enabled ---
   # Note: previous uninstall ran `helm uninstall`, which dropped the 1Gi
   # local-path PVC. Workflow data itself lives in the external
