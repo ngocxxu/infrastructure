@@ -17,10 +17,19 @@ resources:
   - image-update-automation.yaml
   - omniroute.yaml
 
-  # --- new-api: trial, running ALONGSIDE omniroute for a memory A/B.
-  # Public at new-api.ngocquach.com. /setup is unauthenticated until the
-  # wizard is completed — do that on the first rollout.
-  - new-api.yaml
+  # --- cliproxyapi: trial, running ALONGSIDE omniroute for a memory A/B.
+  # Replaces new-api (BYOK key-manager) — this one logs into free-tier CLI
+  # subscriptions (Codex/Claude/Gemini/Antigravity) via OAuth instead, same
+  # mechanism as omniroute/9router but on a bare Go binary. See new-api.yaml's
+  # git history if that trial needs resurrecting.
+  #
+  # Requires the `cliproxyapi-config` Secret to exist BEFORE this rolls out —
+  # the pod cannot start without it (config.yaml, which holds api-keys, is
+  # mounted from that Secret). This is deliberate: leaving `api-keys` empty
+  # makes the proxy answer /v1/chat/completions with NO auth at all — that is
+  # documented upstream behaviour, not a bug (issue #2714) — so failing to
+  # start beats starting open.
+  - cliproxyapi.yaml
 
   # --- n8n: re-enabled ---
   # Note: previous uninstall ran `helm uninstall`, which dropped the 1Gi

@@ -1,0 +1,219 @@
+# CLIProxyAPI — Go single-binary gateway that logs into free-tier CLI
+# subscriptions (Codex, Claude Code, Gemini CLI, Antigravity, Kimi, Grok) via
+# OAuth and re-serves them behind one OpenAI/Gemini/Claude-compatible
+# endpoint. https://github.com/router-for-me/CLIProxyAPI (50k+ stars — the
+# project omniroute/9router/CliRelay took this mechanism from).
+#
+# Chosen over new-api for the "no key, just login" use case: new-api is BYOK
+# (you supply real provider keys); this logs into the same free CLI tiers
+# omniroute pools, on a Go binary instead of Next.js.
+#
+# SECURITY — read before touching this file:
+# Leaving `api-keys` empty in config.yaml is not a misconfiguration upstream
+# considers worth fixing — issue #2714 was closed as "designed behaviour":
+# with no keys configured, /v1/chat/completions answers ANY caller, no auth,
+# indefinitely. So config.yaml (which holds api-keys) is never inlined here —
+# it lives only in the `cliproxyapi-config` Secret, created out-of-band with
+# `kubectl create secret generic`, never through Flux/git. Without that
+# Secret the Deployment has nothing to mount and the pod stays
+# ContainerCreating — fails closed instead of starting open.
+#
+# See the deploy runbook at the bottom of this file before applying.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cliproxyapi-auth
+  namespace: external
+  labels:
+    app.kubernetes.io/name: cliproxyapi
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      # OAuth tokens only (JSON files under ~/.cli-proxy-api), not model data.
+      storage: 256Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cliproxyapi
+  namespace: external
+  labels:
+    app.kubernetes.io/name: cliproxyapi
+spec:
+  replicas: 1
+  # OAuth tokens live on a ReadWriteOnce PVC; two pods writing them at once
+  # is the same hazard as new-api's SQLite file, so recreate instead of
+  # rolling.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cliproxyapi
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cliproxyapi
+    spec:
+      containers:
+        - name: cliproxyapi
+          # Official image referenced directly in upstream's own
+          # docker-compose.yml (CLI_PROXY_IMAGE defaults here).
+          image: eceasy/cli-proxy-api:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8317
+              protocol: TCP
+          env:
+            - name: TZ
+              value: "Asia/Ho_Chi_Minh"
+          # UNMEASURED against real traffic. Upstream's own minimum is
+          # 512Mi (router-for-me-cliproxyapi.mintlify.app/installation); a
+          # bystander RSS reading of ~73-85MB turned up in a memory-leak
+          # bug report (issue #3048) but that is one incidental snapshot,
+          # not a benchmark — don't treat it as a guarantee. Limit is set
+          # at upstream's stated minimum; request is a conservative guess
+          # under it. Correct both from `kubectl top pod` after real use.
+          #
+          # Do NOT turn on usage-statistics-enabled in config.yaml — issue
+          # #3048 is an unbounded per-request memory retention bug in that
+          # path specifically; it is off by default and this manifest
+          # assumes it stays off.
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          # "/" returning 200 is what upstream's own docker-build.sh polls
+          # to decide the container is up.
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 5
+          volumeMounts:
+            # config.yaml is mounted from the Secret at the exact path the
+            # binary reads by default (CWD is /CLIProxyAPI, no --config
+            # flag passed). subPath so the Secret's other potential keys
+            # don't also land as files here.
+            - name: config
+              mountPath: /CLIProxyAPI/config.yaml
+              subPath: config.yaml
+              readOnly: true
+            # auth-dir default is ~/.cli-proxy-api; this image runs as
+            # root, so that's /root/.cli-proxy-api.
+            - name: auth
+              mountPath: /root/.cli-proxy-api
+            - name: logs
+              mountPath: /CLIProxyAPI/logs
+      volumes:
+        - name: config
+          secret:
+            secretName: cliproxyapi-config
+        - name: auth
+          persistentVolumeClaim:
+            claimName: cliproxyapi-auth
+        # Logs are not worth a PVC on a disk already at 82%; they die with
+        # the pod, same call as new-api and n8n before it.
+        - name: logs
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cliproxyapi
+  namespace: external
+  labels:
+    app.kubernetes.io/name: cliproxyapi
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8317
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: cliproxyapi
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cliproxyapi
+  namespace: external
+  labels:
+    app.kubernetes.io/name: cliproxyapi
+spec:
+  ingressClassName: traefik
+  # No tls block: TLS terminates upstream, same as n8n/omniroute/new-api.
+  rules:
+    - host: cliproxyapi.ngocquach.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cliproxyapi
+                port:
+                  number: 8317
+
+# ── Deploy runbook ──────────────────────────────────────────────────────
+#
+# 1. Generate a real client key and create the Secret BEFORE this manifest
+#    is applied (the Deployment will not start without it):
+#
+#      KEY=$(openssl rand -hex 32)
+#      cat > /tmp/cliproxyapi-config.yaml <<CFG
+#      host: ""
+#      port: 8317
+#      auth-dir: "~/.cli-proxy-api"
+#      api-keys:
+#        - "$KEY"
+#      remote-management:
+#        secret-key: ""   # empty = /v0/management routes 404, panel unreachable
+#      CFG
+#      kubectl create secret generic cliproxyapi-config \
+#        --namespace external \
+#        --from-file=config.yaml=/tmp/cliproxyapi-config.yaml
+#      shred -u /tmp/cliproxyapi-config.yaml   # or: rm -P
+#      echo "Client key (save it, it will not be shown again): $KEY"
+#
+# 2. Push/merge this branch, wait for the Deployment to roll out.
+#
+# 3. Log into each free-tier CLI provider you want (OAuth, opens a browser
+#    URL you complete on your own machine). Run one at a time:
+#
+#      kubectl -n external exec -it deploy/cliproxyapi -- \
+#        ./CLIProxyAPI -no-browser --codex-login
+#      kubectl -n external exec -it deploy/cliproxyapi -- \
+#        ./CLIProxyAPI -no-browser --claude-login
+#      kubectl -n external exec -it deploy/cliproxyapi -- \
+#        ./CLIProxyAPI -no-browser --antigravity-login
+#
+#    Each prints a URL and expects a localhost callback. Forward it in a
+#    second terminal while the login command is waiting, matching the port
+#    the command prints, e.g.:
+#
+#      kubectl -n external port-forward deploy/cliproxyapi 1455:1455
+#
+#    Tokens land on the cliproxyapi-auth PVC and survive pod restarts.
+#
+# 4. Point your client at:
+#      base URL:  https://cliproxyapi.ngocquach.com/v1
+#      auth:      Authorization: Bearer <the $KEY from step 1>
