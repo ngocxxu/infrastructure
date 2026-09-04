@@ -57,10 +57,17 @@ spec:
         runAsNonRoot: true
         allowPrivilegeEscalation: false
     replica:
+      # Disabled: this cluster is a single VPS node, so master and replica
+      # always die together — zero failover benefit, and nothing here reads
+      # from the replica endpoint (grepped the repo, no consumer references
+      # it). It was ~28Mi of RAM bought for a redundancy guarantee this
+      # topology can't actually provide. Re-enable if the cluster ever
+      # spans >=1 node, or if a client starts doing explicit read-scaling
+      # against the replica service.
       # Load all other environment variables from Doppler secret
       # All variables with UPPERCASE names from Doppler will be available
       extraEnvVarsSecret: redis-env
-      replicaCount: 1
+      replicaCount: 0
       persistence:
         enabled: true
         size: 0.5Gi
