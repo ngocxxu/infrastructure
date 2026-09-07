@@ -176,8 +176,16 @@ spec:
             # raise only if a larger source-DB throughput need shows up.
             - name: PG_POOL_SIZE
               value: "10"
+            # Explicit "default" username, NOT redis://:password@host. Verified
+            # against the actual Redis instance (`redis-cli AUTH "" pass` ->
+            # WRONGPASS, `redis-cli AUTH default pass` -> OK): Sequin's Erlang
+            # Redis client parses the empty-username form into a 2-arg
+            # AUTH "" password call, which Redis's ACL rejects outright
+            # (empty username isn't a valid user) — this is what actually
+            # crashed the pod (Sequin.Redis.connect_cluster/0), not a wrong
+            # password.
             - name: REDIS_URL
-              value: redis://:$(SEQUIN_REDIS_PASSWORD)@redis-master.shared.svc.cluster.local:6379
+              value: redis://default:$(SEQUIN_REDIS_PASSWORD)@redis-master.shared.svc.cluster.local:6379
             - name: SECRET_KEY_BASE
               valueFrom:
                 secretKeyRef:
