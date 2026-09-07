@@ -212,16 +212,19 @@ spec:
             - name: config
               mountPath: /config
               readOnly: true
-          # A starting point, not a measurement. Check
+          # 256Mi OOMKilled the pod at IDLE, before any real traffic — the
+          # BEAM VM itself plus Sequin's own app (Phoenix, Ecto pool,
+          # replication client) needs more baseline than that. Bumped from a
+          # measured OOM, not a guess; check
           #   kubectl top pod -n shared -l app=sequin
-          # once it has seen real traffic, then tighten.
+          # once it has seen real CDC traffic, then tighten if there's headroom.
           resources:
             requests:
               cpu: 50m
-              memory: 128Mi
+              memory: 192Mi
             limits:
-              cpu: 100m
-              memory: 256Mi
+              cpu: 200m
+              memory: 512Mi
       volumes:
         - name: config
           configMap:
