@@ -188,8 +188,26 @@ spec:
                 secretKeyRef:
                   name: sequin-env
                   key: SEQUIN_VAULT_KEY
-            - name: CONFIG_FILE_PATH
-              value: /config/sequin.yaml
+            # NOT set here on purpose. start_commands.sh runs config apply as
+            # a SEPARATE `bin/sequin eval` invocation from `migrate` — a fresh
+            # BEAM VM that never starts Sequin's OTP application tree, so
+            # Sequin.Repo is never registered (unlike the migrate task, which
+            # wraps itself in Ecto.Migrator.with_repo). With `set -euo
+            # pipefail` at the top of that script, this step throwing aborts
+            # the whole script BEFORE start_application ever runs — the real
+            # cause of the crash loop, not a bad env var here. Verified by
+            # reading start_commands.sh directly inside the running container
+            # and cross-checking Sequin's own docs, which name `sequin config
+            # apply` (run against the ALREADY-RUNNING app, where the repo is
+            # actually registered) as a supported alternative to
+            # CONFIG_FILE_PATH. So: apply sequin.yaml once, manually, after
+            # the pod is healthy — see the one-time step below.
+            #
+            #   kubectl exec -n shared deploy/sequin -- \
+            #     ./prod/rel/sequin/bin/sequin config apply -f /config/sequin.yaml
+            #
+            # Re-run that after any change to the ConfigMap's sequin.yaml —
+            # this Deployment does not auto-reapply it on pod restart.
           volumeMounts:
             - name: config
               mountPath: /config
