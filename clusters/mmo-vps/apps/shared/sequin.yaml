@@ -77,7 +77,13 @@ data:
       - name: vocab
         hostname: postgresql.shared.svc.cluster.local
         port: 5432
-        database: vocab
+        # Physical Postgres database name — verified via `\l` against the
+        # live cluster. NOT "vocab": that was a wrong assumption, the actual
+        # app database is `vocab_db` (matches vocab-be's own
+        # DATABASE_URL in .env.example). `name: vocab` above is just this
+        # entry's own logical name, referenced by sinks[].database below —
+        # unrelated to the Postgres database name and correctly left as-is.
+        database: vocab_db
         username: ${SEQUIN_PG_USER}
         password: ${SEQUIN_PG_PASSWORD}
         slot:
