@@ -1,6 +1,15 @@
 # ============================================================
 # Sequin: Postgres CDC -> webhook (vocab semantic search)
 # ============================================================
+# Plain Deployment, NOT a Helm chart. The chart at
+# oci://registry-1.docker.io/sequinstream/sequin (what its own README
+# documents) does not exist as a publishable artifact — verified via
+# `helm pull` (pull access denied), the Docker Hub API ("object not found"),
+# zero GitHub releases, and no publish CI in that repo. The source code for
+# the chart exists; nothing was ever actually pushed to a registry. So this
+# runs the real, published container image (`sequin/sequin`, verified to
+# exist and updated regularly) directly.
+#
 # Streams changes on public.vocab / public.text_target to vocab-be.
 #
 # WHAT THIS IS *NOT* RESPONSIBLE FOR:
@@ -22,134 +31,192 @@
 #                                        until the 1Gi PVC fills, taking down
 #                                        Postgres — and with it n8n as well.
 #     - publication vocab_embedding_pub  created by the vocab-be Prisma migration
-#                                        20260907090000_add_vocab_embedding_state
+#                                        20260907120000_add_vocab_embedding_state
 #
-#   MANUAL, one-time, before first deploy — a HelmRelease values file cannot
-#   run SQL, so this cannot be expressed as code here. Same situation as n8n's
-#   separate "n8n" database on this same Postgres instance: no migration or Job
-#   creates it either, it was a one-time psql step.
+#   MANUAL, one-time, before first deploy — no migration or Job creates this
+#   database (same situation as n8n's separate "n8n" database on this same
+#   Postgres instance — a one-time psql step, not code):
 #
 #     kubectl exec -n shared postgresql-0 -- psql -U "$POSTGRES_USERNAME" -d postgres \
 #       -c "CREATE DATABASE sequin;"
 #
 #   This is Sequin's own internal config store (accounts, sinks, http
-#   endpoints) — separate from the `vocab` database it reads via
-#   externalDatabase below, and from `vocab_embedding_state`. Skipping this
-#   step leaves the pod CrashLoopBackOff on its first connection attempt.
-#
-# Sequin's docs require the publication to exist BEFORE the replication slot,
-# which holds here because the migration runs before this ever connects.
+#   endpoints) — separate from the `vocab` database it reads via CDC, and from
+#   `vocab_embedding_state`. Skipping this leaves the pod CrashLoopBackOff.
 #
 # FOOTPRINT: no bundled Postgres or Redis — both point at the existing shared
-# instances, so this adds one Go process rather than a stateful set.
-apiVersion: helm.toolkit.fluxcd.io/v2
-kind: HelmRelease
+# instances, so this adds one Go/Elixir process, not a stateful set. No PVC:
+# all state lives in the external `sequin` database.
+#
+# DOPPLER (secret "sequin-env", see sequin-secret.yaml):
+#   SEQUIN_PG_USER            copy of POSTGRES_USERNAME (postgresql-env)
+#   SEQUIN_PG_PASSWORD        copy of POSTGRES_PASSWORD (postgresql-env)
+#   SEQUIN_REDIS_PASSWORD     copy of REDIS_PASSWORD (redis-env)
+#   SEQUIN_CDC_WEBHOOK_TOKEN  must equal CDC_WEBHOOK_TOKEN in vocab-be
+#   SEQUIN_SECRET_KEY_BASE    generate once: `openssl rand -base64 48`
+#   SEQUIN_VAULT_KEY          generate once: `openssl rand -base64 32`
+#
+# The last two are NOT throwaway — SECRET_KEY_BASE signs session/cookie data,
+# VAULT_KEY encrypts credentials Sequin stores in its own DB (e.g. the webhook
+# bearer token). Generate once, store in Doppler, never rotate casually: doing
+# so invalidates anything already encrypted with the old key.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sequin-config
+  namespace: shared
+data:
+  # ${VAR} is resolved by Sequin itself at process startup, from its own
+  # container env — not by Kubernetes and not by Flux. Verified against
+  # Sequin's own docs (https://sequinstream.com/docs/reference/sequin-yaml)
+  # and against the identical mechanism already proven working in this
+  # repo's local docker-compose setup (docker/sequin.local.yaml).
+  sequin.yaml: |
+    databases:
+      - name: vocab
+        hostname: postgresql.shared.svc.cluster.local
+        port: 5432
+        database: vocab
+        username: ${SEQUIN_PG_USER}
+        password: ${SEQUIN_PG_PASSWORD}
+        slot:
+          name: vocab_embedding_slot
+        publication:
+          name: vocab_embedding_pub
+
+    http_endpoints:
+      - name: vocab-be-cdc
+        # In-cluster only; this traffic never leaves the node. Path includes
+        # the app's API_PREFIX (/api/v1); service listens on port 3000.
+        url: http://vocab-be.project-vocab.svc.cluster.local:3000/api/v1/internal/cdc/vocab-changed
+        encrypted_headers:
+          - key: Authorization
+            # Must match CDC_WEBHOOK_TOKEN in the vocab-be environment. The
+            # endpoint rejects everything when its side is unset, so a
+            # mismatch fails closed rather than open.
+            value: Bearer ${SEQUIN_CDC_WEBHOOK_TOKEN}
+
+    sinks:
+      - name: vocab-changed
+        database: vocab
+        source:
+          include_tables:
+            - public.vocab
+            - public.text_target
+        destination:
+          type: webhook
+          http_endpoint: vocab-be-cdc
+---
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: sequin
   namespace: shared
 spec:
-  interval: 5m
-  releaseName: sequin
-  chart:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sequin
+  template:
+    metadata:
+      labels:
+        app: sequin
     spec:
-      chart: sequin
-      sourceRef:
-        kind: HelmRepository
-        name: sequin
-        namespace: flux-system
-      version: "0.2.0"
-  targetNamespace: shared
-  install:
-    createNamespace: true
-    timeout: 10m
-    remediation:
-      retries: 2
-  upgrade:
-    timeout: 10m
-    remediation:
-      retries: 2
-      remediateLastFailure: true
-      strategy: uninstall
-  values:
-    # Reuse the shared stateful services instead of standing up Sequin's own.
-    postgresql:
-      enabled: false
-    redis:
-      enabled: false
+      containers:
+        - name: sequin
+          # Pinned to a real, verified-existing tag rather than :latest —
+          # same convention as postgresql:17.5-alpine / redis-stack:7.2.0-v18
+          # elsewhere in this repo. Confirmed present on Docker Hub at time of
+          # writing; bump deliberately, not automatically.
+          image: sequin/sequin:v0.14.6
+          ports:
+            - containerPort: 7376
+          env:
+            # Every credential is read from the Secret exactly ONCE, under its
+            # Doppler name. Everything below this point is a $(VAR) alias —
+            # Kubernetes' own env-var interpolation, which only resolves
+            # against a var declared EARLIER in this same list (hence these
+            # go first). This is a different mechanism from the ${VAR} inside
+            # sequin.yaml, which Sequin resolves itself from its process env —
+            # two layers, two owners, both landing on these same values.
+            - name: SEQUIN_PG_USER
+              valueFrom:
+                secretKeyRef:
+                  name: sequin-env
+                  key: SEQUIN_PG_USER
+            - name: SEQUIN_PG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sequin-env
+                  key: SEQUIN_PG_PASSWORD
+            - name: SEQUIN_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sequin-env
+                  key: SEQUIN_REDIS_PASSWORD
+            - name: SEQUIN_CDC_WEBHOOK_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: sequin-env
+                  key: SEQUIN_CDC_WEBHOOK_TOKEN
 
-    # Two separate DB user/password pairs are in play here, both supplied the
-    # SAME way: as plain container env vars, via extraEnvVarsSecret (confirmed
-    # field in this chart's values.yaml) from the "sequin-env" Doppler secret.
-    #   1. externalDatabase/externalRedis below (Sequin's OWN metadata store —
-    #      accounts, sink/endpoint config). Uses the shared Postgres/Redis
-    #      credentials already in postgresql-env / redis-env, copied into
-    #      sequin-env under these names.
-    #   2. configuration.databases[0].username/password further down (the
-    #      SOURCE `vocab` DB Sequin subscribes to for CDC) — same credentials,
-    #      referenced through Sequin's own ${VAR} substitution in its
-    #      declarative config, which it evaluates itself at parse time (see
-    #      https://sequinstream.com/docs/reference/sequin-yaml). This is NOT a
-    #      Flux/Helm mechanism — Flux ships the ${...} placeholder as a literal
-    #      string; only the running Sequin process resolves it, from its own
-    #      environment. That is why extraEnvVarsSecret is what makes it work.
-    extraEnvVarsSecret: sequin-env
-
-    externalDatabase:
-      host: postgresql.shared.svc.cluster.local
-      port: 5432
-      database: sequin
-      user: "${SEQUIN_PG_USER}"
-      password: "${SEQUIN_PG_PASSWORD}"
-
-    externalRedis:
-      host: redis-master.shared.svc.cluster.local
-      port: 6379
-      password: "${SEQUIN_REDIS_PASSWORD}"
-
-    # A starting point, not a measurement. Check
-    #   kubectl top pod -n shared -l app.kubernetes.io/name=sequin
-    # once it has seen real traffic, then tighten. Explicit rather than
-    # resourcesPreset so the numbers are visible in review.
-    resources:
-      requests:
-        cpu: 50m
-        memory: 128Mi
-      limits:
-        cpu: 500m
-        memory: 256Mi
-
-    configuration:
-      databases:
-        - name: vocab
-          hostname: postgresql.shared.svc.cluster.local
-          port: 5432
-          database: vocab
-          username: ${SEQUIN_PG_USER}
-          password: ${SEQUIN_PG_PASSWORD}
-          slot:
-            name: vocab_embedding_slot
-          publication:
-            name: vocab_embedding_pub
-
-      http_endpoints:
-        - name: vocab-be-cdc
-          # In-cluster only; this traffic never leaves the node. Path includes
-          # the app's API_PREFIX (/api/v1); service listens on port 3000.
-          url: http://vocab-be.project-vocab.svc.cluster.local:3000/api/v1/internal/cdc/vocab-changed
-          encrypted_headers:
-            - key: Authorization
-              # Must match CDC_WEBHOOK_TOKEN in the vocab-be environment.
-              # The endpoint rejects everything when its side is unset, so a
-              # mismatch fails closed rather than open.
-              value: Bearer ${SEQUIN_CDC_WEBHOOK_TOKEN}
-
-      sinks:
-        - name: vocab-changed
-          database: vocab
-          source:
-            include_tables:
-              - public.vocab
-              - public.text_target
-          destination:
-            type: webhook
-            http_endpoint: vocab-be-cdc
+            - name: PG_HOSTNAME
+              value: postgresql.shared.svc.cluster.local
+            - name: PG_PORT
+              value: "5432"
+            - name: PG_DATABASE
+              value: sequin
+            - name: PG_USERNAME
+              value: $(SEQUIN_PG_USER)
+            - name: PG_PASSWORD
+              value: $(SEQUIN_PG_PASSWORD)
+            # Default 10 per Sequin's own docs — the max concurrent
+            # connections it holds open to Postgres. Fine at this scale;
+            # raise only if a larger source-DB throughput need shows up.
+            - name: PG_POOL_SIZE
+              value: "10"
+            - name: REDIS_URL
+              value: redis://:$(SEQUIN_REDIS_PASSWORD)@redis-master.shared.svc.cluster.local:6379
+            - name: SECRET_KEY_BASE
+              valueFrom:
+                secretKeyRef:
+                  name: sequin-env
+                  key: SEQUIN_SECRET_KEY_BASE
+            - name: VAULT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: sequin-env
+                  key: SEQUIN_VAULT_KEY
+            - name: CONFIG_FILE_PATH
+              value: /config/sequin.yaml
+          volumeMounts:
+            - name: config
+              mountPath: /config
+              readOnly: true
+          # A starting point, not a measurement. Check
+          #   kubectl top pod -n shared -l app=sequin
+          # once it has seen real traffic, then tighten.
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 100m
+              memory: 256Mi
+      volumes:
+        - name: config
+          configMap:
+            name: sequin-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sequin
+  namespace: shared
+spec:
+  selector:
+    app: sequin
+  ports:
+    - port: 7376
+      targetPort: 7376

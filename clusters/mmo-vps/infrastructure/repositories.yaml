@@ -38,15 +38,3 @@ metadata:
 spec:
   interval: 1h
   url: https://community-charts.github.io/helm-charts
----
-# Helm Repository for Sequin (Postgres CDC)
-# OCI registry, same shape as the bitnami entry above.
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: HelmRepository
-metadata:
-  name: sequin
-  namespace: flux-system
-spec:
-  interval: 1h
-  type: oci
-  url: oci://registry-1.docker.io/sequinstream
