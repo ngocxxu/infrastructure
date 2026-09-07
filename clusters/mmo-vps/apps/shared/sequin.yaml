@@ -1,0 +1,155 @@
+# ============================================================
+# Sequin: Postgres CDC -> webhook (vocab semantic search)
+# ============================================================
+# Streams changes on public.vocab / public.text_target to vocab-be.
+#
+# WHAT THIS IS *NOT* RESPONSIBLE FOR:
+# The webhook consumer IGNORES the event payload — it never parses insert vs
+# update vs delete, never reads old-row values. All it does is wake the
+# embedding worker early. The worker then decides what actually changed by
+# comparing a fingerprint in its own SQL.
+#
+# So Sequin being down costs LATENCY ONLY (~30s worst case, the worker's own
+# poll interval) and can never cause missed or wrong embeddings. Treat an
+# outage here as degraded speed, not data loss — do not page for it.
+#
+# PREREQUISITES:
+#
+#   Already in place:
+#     - wal_level = logical              postgresql.yaml extendedConfiguration
+#     - max_slot_wal_keep_size = 256MB   same file. NOT optional: if this pod
+#                                        dies the slot would otherwise retain WAL
+#                                        until the 1Gi PVC fills, taking down
+#                                        Postgres — and with it n8n as well.
+#     - publication vocab_embedding_pub  created by the vocab-be Prisma migration
+#                                        20260907090000_add_vocab_embedding_state
+#
+#   MANUAL, one-time, before first deploy — a HelmRelease values file cannot
+#   run SQL, so this cannot be expressed as code here. Same situation as n8n's
+#   separate "n8n" database on this same Postgres instance: no migration or Job
+#   creates it either, it was a one-time psql step.
+#
+#     kubectl exec -n shared postgresql-0 -- psql -U "$POSTGRES_USERNAME" -d postgres \
+#       -c "CREATE DATABASE sequin;"
+#
+#   This is Sequin's own internal config store (accounts, sinks, http
+#   endpoints) — separate from the `vocab` database it reads via
+#   externalDatabase below, and from `vocab_embedding_state`. Skipping this
+#   step leaves the pod CrashLoopBackOff on its first connection attempt.
+#
+# Sequin's docs require the publication to exist BEFORE the replication slot,
+# which holds here because the migration runs before this ever connects.
+#
+# FOOTPRINT: no bundled Postgres or Redis — both point at the existing shared
+# instances, so this adds one Go process rather than a stateful set.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: sequin
+  namespace: shared
+spec:
+  interval: 5m
+  releaseName: sequin
+  chart:
+    spec:
+      chart: sequin
+      sourceRef:
+        kind: HelmRepository
+        name: sequin
+        namespace: flux-system
+      version: "0.2.0"
+  targetNamespace: shared
+  install:
+    createNamespace: true
+    timeout: 10m
+    remediation:
+      retries: 2
+  upgrade:
+    timeout: 10m
+    remediation:
+      retries: 2
+      remediateLastFailure: true
+      strategy: uninstall
+  values:
+    # Reuse the shared stateful services instead of standing up Sequin's own.
+    postgresql:
+      enabled: false
+    redis:
+      enabled: false
+
+    # Two separate DB user/password pairs are in play here, both supplied the
+    # SAME way: as plain container env vars, via extraEnvVarsSecret (confirmed
+    # field in this chart's values.yaml) from the "sequin-env" Doppler secret.
+    #   1. externalDatabase/externalRedis below (Sequin's OWN metadata store —
+    #      accounts, sink/endpoint config). Uses the shared Postgres/Redis
+    #      credentials already in postgresql-env / redis-env, copied into
+    #      sequin-env under these names.
+    #   2. configuration.databases[0].username/password further down (the
+    #      SOURCE `vocab` DB Sequin subscribes to for CDC) — same credentials,
+    #      referenced through Sequin's own ${VAR} substitution in its
+    #      declarative config, which it evaluates itself at parse time (see
+    #      https://sequinstream.com/docs/reference/sequin-yaml). This is NOT a
+    #      Flux/Helm mechanism — Flux ships the ${...} placeholder as a literal
+    #      string; only the running Sequin process resolves it, from its own
+    #      environment. That is why extraEnvVarsSecret is what makes it work.
+    extraEnvVarsSecret: sequin-env
+
+    externalDatabase:
+      host: postgresql.shared.svc.cluster.local
+      port: 5432
+      database: sequin
+      user: "${SEQUIN_PG_USER}"
+      password: "${SEQUIN_PG_PASSWORD}"
+
+    externalRedis:
+      host: redis-master.shared.svc.cluster.local
+      port: 6379
+      password: "${SEQUIN_REDIS_PASSWORD}"
+
+    # A starting point, not a measurement. Check
+    #   kubectl top pod -n shared -l app.kubernetes.io/name=sequin
+    # once it has seen real traffic, then tighten. Explicit rather than
+    # resourcesPreset so the numbers are visible in review.
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+
+    configuration:
+      databases:
+        - name: vocab
+          hostname: postgresql.shared.svc.cluster.local
+          port: 5432
+          database: vocab
+          username: ${SEQUIN_PG_USER}
+          password: ${SEQUIN_PG_PASSWORD}
+          slot:
+            name: vocab_embedding_slot
+          publication:
+            name: vocab_embedding_pub
+
+      http_endpoints:
+        - name: vocab-be-cdc
+          # In-cluster only; this traffic never leaves the node. Path includes
+          # the app's API_PREFIX (/api/v1); service listens on port 3000.
+          url: http://vocab-be.project-vocab.svc.cluster.local:3000/api/v1/internal/cdc/vocab-changed
+          encrypted_headers:
+            - key: Authorization
+              # Must match CDC_WEBHOOK_TOKEN in the vocab-be environment.
+              # The endpoint rejects everything when its side is unset, so a
+              # mismatch fails closed rather than open.
+              value: Bearer ${SEQUIN_CDC_WEBHOOK_TOKEN}
+
+      sinks:
+        - name: vocab-changed
+          database: vocab
+          source:
+            include_tables:
+              - public.vocab
+              - public.text_target
+          destination:
+            type: webhook
+            http_endpoint: vocab-be-cdc
