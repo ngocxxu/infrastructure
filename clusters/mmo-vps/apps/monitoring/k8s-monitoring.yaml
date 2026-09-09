@@ -109,15 +109,21 @@ spec:
 
     alloy:
       alloy:
-        # This is the metrics/singleton collector (pod alloy-0). Observed
-        # ~130-140Mi with no prior ceiling.
+        # This is the metrics/singleton collector (pod alloy-0). The
+        # earlier "~130-140Mi observed" figure was measured while the pod
+        # had NO limit; once 192Mi was actually applied it OOMKilled in a
+        # loop (749 restarts / 4d, exit 137 ~4min after each start - the
+        # initial cadvisor+KSM scrape and remote_write WAL burst peaks
+        # well above steady state). 384Mi clears that peak; node has
+        # ~1Gi headroom. CPU raised too: 100m throttled the startup
+        # scrape, stretching the window where the burst is held in RAM.
         resources:
           requests:
-            cpu: 20m
-            memory: 96Mi
-          limits:
-            cpu: 100m
+            cpu: 50m
             memory: 192Mi
+          limits:
+            cpu: 300m
+            memory: 384Mi
 
     alloy-logs:
       alloy:
