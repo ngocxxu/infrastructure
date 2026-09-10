@@ -50,14 +50,14 @@ spec:
         enabled: true
         size: 1Gi
         storageClass: "local-path"
-      # 150Mi limit against ~62-71Mi observed = ~2x headroom. Still worth
-      # watching: Postgres allocates work_mem PER SORT/HASH operation, so
-      # concurrent heavier queries can spike above steady-state, and an
+      # Bumped 150Mi -> 250Mi after an OOMKill on 2026-09-10 (observed
+      # ~96Mi steady-state, but work_mem is allocated PER SORT/HASH
+      # operation so concurrent heavier queries spike above that). An
       # OOMKill here takes down BOTH vocab and n8n, since they share this
       # instance.
       resources:
         limits:
-          memory: 150Mi
+          memory: 250Mi
           cpu: 100m
         requests:
           memory: 96Mi
